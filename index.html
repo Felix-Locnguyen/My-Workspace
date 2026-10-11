@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý công việc</title>
+<style>
+  :root {
+    --bg: #000;
+    --panel: #0a0a0a;
+    --line: #262626;
+    --text: #fff;
+    --muted: #8a8a8a;
+    --radius: 6px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; }
+
+  .app { min-height: 100vh; display: grid; grid-template-columns: 200px minmax(0,1fr); }
+
+  aside { border-right: 1px solid var(--line); padding: 24px 14px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; align-self: start; overflow-y: auto; }
+  .brand { font-size: 16px; font-weight: 700; padding: 0 10px 24px; }
+  .nav { display: grid; gap: 2px; }
+  .nav button {
+    color: var(--muted); background: transparent; border: 0; text-align: left;
+    padding: 9px 10px; border-radius: var(--radius); width: 100%;
+  }
+  .nav button:hover { color: var(--text); background: #111; }
+  .nav button.active { color: var(--text); background: #1a1a1a; }
+
+  main { min-width: 0; padding: 32px; max-width: 1200px; width: 100%; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .page-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
+  #bgLayer { position: fixed; inset: 0; z-index: 0; }
+  #bgLayer img, #bgLayer video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #bgLayer:not(:empty)::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.05); }
+  body.has-bg .page-head h1, body.has-bg .page-head .subtitle { text-shadow: 0 1px 8px rgba(0,0,0,.85); }
+  body.has-bg .page-head .subtitle { color: #d4d4d4; }
+  .app { position: relative; z-index: 1; }
+  body.has-bg .panel, body.has-bg .stat { background: rgba(10,10,10,.86); }
+  body.has-bg aside { background: rgba(0,0,0,.6); }
+  .aside-foot { margin-top: auto; padding: 16px 6px 0; display: grid; gap: 8px; }
+  .ui-hint { display: none; }
+  main { transition: opacity .3s ease, filter .3s ease, visibility 0s; }
+  body.ui-hidden { overflow: hidden; }
+  body.ui-hidden main { opacity: 0; filter: blur(8px); visibility: hidden; pointer-events: none; transition: opacity .3s ease, filter .3s ease, visibility 0s linear .3s; }
+  body.ui-hidden .ui-hint { display: block; }
+  body.ui-hidden #hideUiBtn { display: none; }
+  .button:disabled { opacity: .4; cursor: default; }
+  .hero-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .hero-row:first-child { border-top: 0; padding-top: 0; }
+  h1 { font-size: 24px; margin: 0; font-weight: 600; }
+  .subtitle { color: var(--muted); margin-top: 4px; font-size: 13px; }
+  h2 { font-size: 14px; font-weight: 600; margin: 0; }
+
+  .button { border: 1px solid var(--line); background: transparent; color: var(--text); padding: 8px 12px; border-radius: var(--radius); }
+  .button:hover { border-color: #555; }
+  .button.primary { background: var(--text); color: #000; border-color: var(--text); font-weight: 600; }
+  .button.primary:hover { background: #ddd; }
+  .button.ghost { border: 0; padding: 4px 8px; color: var(--muted); font-size: 12px; }
+  .button.ghost:hover { color: var(--text); }
+
+  .stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+  .panel, .stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+  .stat { padding: 16px; }
+  .stat-label { color: var(--muted); font-size: 12px; }
+  .stat-value { font-size: 24px; font-weight: 600; margin-top: 6px; }
+  .stat-foot { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  .grid-2 { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 16px; align-items: start; }
+  .col { display: grid; gap: 16px; }
+  .panel { padding: 18px; min-width: 0; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .note { color: var(--muted); font-size: 12px; }
+
+  .task-row { display: grid; grid-template-columns: 18px minmax(0,1fr) auto auto auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .task-row:first-child { border-top: 0; padding-top: 0; }
+  .check { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px; margin: 0; cursor: pointer; background: transparent; display: flex; align-items: center; justify-content: center; }
+  .check:checked { background: var(--text); border-color: var(--text); }
+  .check:checked::after { content: "✓"; color: #000; font-size: 11px; font-weight: bold; }
+  .task-title { font-size: 14px; }
+  .task-row.done .task-title { color: var(--muted); text-decoration: line-through; }
+  .task-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tag { display: inline-block; padding: 2px 8px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+  .project-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .project-row:first-child { border-top: 0; padding-top: 0; }
+  .project-title { font-size: 14px; }
+  .project-desc { color: var(--muted); font-size: 12px; margin: 2px 0 8px; }
+  .progress { height: 3px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress span { display: block; height: 100%; background: var(--text); }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  input, select { color: var(--text); background: #000; border: 1px solid var(--line); border-radius: var(--radius); padding: 9px 10px; outline: none; }
+  input:focus, select:focus { border-color: #777; }
+  .toolbar input { flex: 1; min-width: 180px; }
+  .empty-note { color: var(--muted); font-size: 13px; padding: 12px 0; }
+
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 13px; }
+  th { color: var(--muted); text-align: left; font-weight: 500; font-size: 12px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 12px 10px; }
+  th:first-child, td:first-child { padding-left: 0; }
+  tr:last-child td { border-bottom: 0; }
+  .muted { color: var(--muted); }
+
+  .kanban { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; align-items: start; }
+  .card { border: 1px solid var(--line); padding: 10px; border-radius: var(--radius); margin-bottom: 8px; cursor: pointer; }
+  .card:hover { border-color: #555; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 440px; }
+  .modal h3 { margin: 0 0 16px; font-size: 15px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .form-group input, .form-group select { width: 100%; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #000; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; z-index: 200; transform: translateY(100px); opacity: 0; transition: all .25s ease; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  .year-cards { display: grid; gap: 16px; margin-bottom: 16px; }
+  .matrix-scroll { overflow-x: auto; padding-bottom: 6px; }
+  .matrix-frame { display: flex; gap: 6px; width: max-content; }
+  .wd { display: grid; grid-template-rows: repeat(7, 12px); gap: 3px; margin-top: 19px; width: 18px; font-size: 10px; line-height: 12px; color: var(--muted); }
+  .months { display: grid; grid-template-columns: repeat(54, 12px); column-gap: 3px; height: 16px; margin-bottom: 3px; font-size: 10px; color: var(--muted); }
+  .months span { white-space: nowrap; }
+  .matrix { display: grid; grid-template-columns: repeat(54, 12px); grid-template-rows: repeat(7, 12px); gap: 3px; }
+  .cell { width: 12px; height: 12px; border: 0; padding: 0; border-radius: 2px; background: #1a1a1a; }
+  .cell.l1 { background: #404040; }
+  .cell.l2 { background: #707070; }
+  .cell.l3 { background: #a8a8a8; }
+  .cell.l4 { background: #fff; }
+  .cell.future { opacity: .3; }
+  .cell.today, .cell.sel { outline: 1px solid #fff; outline-offset: 1px; }
+  .cell:hover { outline: 1px solid #888; outline-offset: 1px; }
+  .matrix-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; min-height: 28px; }
+  .legend { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }
+  .legend .cell { cursor: default; }
+  .legend .cell:hover { outline: 0; }
+  .graph-title { font-size: 16px; margin-bottom: 10px; }
+  .year-layout { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 16px; align-items: start; }
+  .year-list { display: grid; gap: 6px; }
+  .year-btn { background: transparent; border: 0; color: var(--muted); text-align: left; padding: 8px 14px; border-radius: var(--radius); }
+  .year-btn:hover { color: var(--text); background: #111; }
+  .year-btn.active { background: var(--text); color: #000; font-weight: 600; }
+  @media (max-width: 800px) {
+    .year-layout { grid-template-columns: 1fr; }
+    .year-list { grid-auto-flow: column; justify-content: start; order: -1; }
+  }
+
+  @media (max-width: 800px) {
+    .app { grid-template-columns: 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); padding: 12px; position: static; height: auto; }
+    .brand { padding: 0 6px 10px; }
+    .nav { grid-auto-flow: column; overflow-x: auto; }
+    .nav button { white-space: nowrap; }
+    main { padding: 20px 14px; }
+    .grid-2, .kanban { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+</style>
+</head>
+<body>
+<div id="bgLayer" aria-hidden="true"></div>
+<div class="app">
+  <aside>
+    <div class="brand">Quản lý công việc</div>
+    <nav class="nav" aria-label="Điều hướng">
+      <button class="active" data-view="dashboard">Tổng quan</button>
+      <button data-view="tasks">Công việc</button>
+      <button data-view="projects">Dự án</button>
+      <button data-view="finance">Tài chính</button>
+      <button data-view="settings">Cài đặt</button>
+    </nav>
+    <div class="aside-foot">
+      <button class="button" id="hideUiBtn">Ẩn giao diện</button>
+      <div class="note ui-hint">Nhấn Enter để hiện lại</div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- Tổng quan -->
+    <section class="view active" id="view-dashboard">
+      <div class="page-head">
+        <div><h1 id="welcomeHeading">Xin chào.</h1><div class="subtitle" id="today"></div></div>
+        <button class="button primary" id="quickAdd">+ Thêm công việc</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Công việc hoàn thành</div><div class="stat-value" id="dashTaskStat">0/0</div></div>
+        <div class="stat"><div class="stat-label">Dự án</div><div class="stat-value" id="dashProjectCount">0</div></div>
+        <div class="stat"><div class="stat-label">Dòng tiền ròng</div><div class="stat-value" id="dashNetCash">0 ₫</div></div>
+        <div class="stat"><div class="stat-label">Tổng tài sản</div><div class="stat-value" id="dashAssets">0 ₫</div></div>
+      </div>
+
+      <div id="yearCards" class="year-cards"></div>
+
+      <div class="grid-2">
+        <section class="panel">
+          <div class="panel-head"><h2>Công việc gần đây</h2><button class="button ghost" data-go="tasks">Xem tất cả →</button></div>
+          <div id="dashboardTasks"></div>
+        </section>
+        <div class="col">
+          <section class="panel">
+            <div class="panel-head"><h2>Dự án</h2><button class="button ghost" data-go="projects">Xem tất cả →</button></div>
+            <div id="dashProjectsList"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>Thu chi tháng</h2></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="muted">Thu nhập</span><span id="dashIncome">0 ₫</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="muted">Chi tiêu</span><span id="dashExpense">0 ₫</span></div>
+            <div class="progress"><span id="dashExpenseBar" style="width:0%"></span></div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- Công việc -->
+    <section class="view" id="view-tasks">
+      <div class="page-head">
+        <div><h1>Công việc</h1></div>
+        <button class="button primary" id="addTaskBtn">+ Thêm công việc</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Tổng</div><div class="stat-value" id="taskTotal">0</div></div>
+        <div class="stat"><div class="stat-label">Hoàn thành</div><div class="stat-value" id="taskDone">0</div></div>
+        <div class="stat"><div class="stat-label">Chưa xong</div><div class="stat-value" id="taskPending">0</div></div>
+        <div class="stat"><div class="stat-label">Tỷ lệ</div><div class="stat-value" id="taskRate">0%</div></div>
+      </div>
+      <section class="panel">
+        <div class="toolbar">
+          <input id="taskSearch" placeholder="Tìm công việc..." />
+          <select id="taskFilterCategory">
+            <option value="all">Tất cả phân loại</option>
+            <option value="Học tập">Học tập</option>
+            <option value="Project">Project</option>
+            <option value="Tài chính">Tài chính</option>
+            <option value="Đời thường">Đời thường</option>
+          </select>
+          <select id="taskFilter">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="open">Chưa xong</option>
+            <option value="done">Đã xong</option>
+          </select>
+        </div>
+        <div id="allTasks"></div>
+      </section>
+    </section>
+
+    <!-- Dự án -->
+    <section class="view" id="view-projects">
+      <div id="projectsMainContainer">
+        <div class="page-head">
+          <div><h1>Dự án</h1></div>
+          <button class="button primary" id="addProjectBtn">+ Dự án mới</button>
+        </div>
+        <section class="panel">
+          <div id="projectsListFull"></div>
+        </section>
+      </div>
+      <div id="projectDetailContainer" style="display:none;"></div>
+    </section>
+
+    <!-- Tài chính -->
+    <section class="view" id="view-finance">
+      <div class="page-head">
+        <div><h1>Tài chính</h1></div>
+        <div style="display:flex;gap:8px;">
+          <button class="button" id="openGoalSettings">Mục tiêu</button>
+          <button class="button primary" id="addTransactionBtn">+ Thêm giao dịch</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Thu nhập tháng</div><div class="stat-value" id="finIncome">0</div><div class="stat-foot">Mục tiêu: <span id="statGoalIncome">0</span></div></div>
+        <div class="stat"><div class="stat-label">Chi tiêu tháng</div><div class="stat-value" id="finExpense">0</div></div>
+        <div class="stat"><div class="stat-label">Tổng tài sản</div><div class="stat-value" id="finTotalAsset">0 ₫</div></div>
+        <div class="stat"><div class="stat-label">Mục tiêu tài sản</div><div class="stat-value" id="finGoalAssetShow">0</div><div class="stat-foot" id="finGoalAssetComp"></div></div>
+      </div>
+
+      <section class="panel" style="margin-bottom:16px;">
+        <div class="panel-head"><h2>Giao dịch</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Ngày</th><th>Tên</th><th>Danh mục</th><th>Loại</th><th>Số tiền</th><th></th></tr></thead>
+            <tbody id="transactionsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Tài sản</h2>
+          <button class="button primary" id="addAssetBtn">+ Thêm tài sản</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Tên</th><th>Phân loại</th><th>Giá vốn</th><th>Giá hiện tại</th><th>Chênh lệch</th><th>Thu nhập thụ động</th><th></th></tr>
+            </thead>
+            <tbody id="assetsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- Cài đặt -->
+    <section class="view" id="view-settings">
+      <div class="page-head"><div><h1>Cài đặt</h1></div></div>
+      <section class="panel" style="max-width:480px;">
+        <div class="form-group">
+          <label for="settingsName">Tên hiển thị</label>
+          <input id="settingsName" style="width:100%" />
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="button primary" id="saveSettings">Lưu</button>
+          <button class="button" id="resetData">Khôi phục dữ liệu mẫu</button>
+        </div>
+        <p class="note" style="margin-top:16px">Dữ liệu được lưu trong LocalStorage của trình duyệt.</p>
+      </section>
+
+      <section class="panel" style="max-width:480px;margin-top:16px;">
+        <div class="panel-head"><h2>Hình nền trang</h2></div>
+        <div id="heroSettings"></div>
+        <p class="note" style="margin-top:16px">Hỗ trợ ảnh hoặc video (tối đa 50MB), lưu ngay trên trình duyệt này.</p>
+        <input type="file" id="heroFile" accept="image/*,video/*" hidden>
+      </section>
+
+      <section class="panel" style="max-width:480px;margin-top:16px;">
+        <div class="panel-head"><h2>Giao diện</h2></div>
+        <div class="form-group">
+          <label for="idleHide">Tự ẩn giao diện khi không thao tác</label>
+          <select id="idleHide">
+            <option value="0">Tắt</option>
+            <option value="10">Sau 10 giây</option>
+            <option value="30">Sau 30 giây</option>
+            <option value="60">Sau 1 phút</option>
+            <option value="120">Sau 2 phút</option>
+            <option value="300">Sau 5 phút</option>
+          </select>
+        </div>
+        <p class="note">Khi giao diện ẩn chỉ còn hình nền và thanh điều hướng. Nhấn Enter để hiện lại.</p>
+      </section>
+    </section>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="button" id="modalCancel">Hủy</button>
+      <button class="button primary" id="modalSubmit">Xác nhận</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  const defaultState = {
+    user: { name: "Lộc" },
+    goals: { monthlyIncome: 10000000, assetGoal: 500000000 },
+    tasks: [
+      { id: 1, title: 'Hoàn thiện pipeline xử lý dữ liệu', meta: '60 phút', tag: 'Project', projectTitle: 'Smart Beekeeping Farm', status: 'open' },
+      { id: 2, title: 'Đọc tài liệu RAG evaluation', meta: '30 phút', tag: 'Học tập', projectTitle: '', status: 'open' },
+      { id: 3, title: 'Thiết kế API quản lý thùng ong', meta: '90 phút', tag: 'Project', projectTitle: 'Smart Beekeeping Farm', status: 'open' },
+      { id: 4, title: 'Review kế hoạch tuần', meta: '15 phút', tag: 'Đời thường', projectTitle: '', status: 'open' },
+      { id: 5, title: 'Cập nhật README portfolio', meta: '30 phút', tag: 'Project', projectTitle: 'locOS Personal System', status: 'done' },
+      { id: 6, title: 'Ôn tập Eigenvector và PCA', meta: '45 phút', tag: 'Học tập', projectTitle: '', status: 'done' },
+      { id: 7, title: 'Lập trình IoT cảm biến nhiệt độ', meta: '60 phút', tag: 'Project', projectTitle: 'Smart Beekeeping Farm', status: 'open' }
+    ],
+    projects: [
+      { id: 1, title: 'Smart Beekeeping Farm', desc: 'IoT · AI · Flask · SQLite', progress: 35 },
+      { id: 2, title: 'Home Credit Risk', desc: 'ML · LightGBM · PostgreSQL', progress: 85 },
+      { id: 3, title: 'locOS Personal System', desc: 'HTML · CSS · JavaScript', progress: 25 },
+      { id: 4, title: 'AI Engineer Roadmap', desc: 'Learning · Portfolio · Open source', progress: 62 }
+    ],
+    transactions: [
+      { id: 1, date: '10/10', name: 'Delivery work', category: 'thu nhập thêm', type: 'Income', amount: 7520000 },
+      { id: 2, date: '03/10', name: 'Room rent', category: 'nhà ở', type: 'Expense', amount: 3000000 }
+    ],
+    assets: [
+      { id: 1, name: 'Cổ phiếu FPT', type: 'chứng khoán', costPrice: 20000000, currentPrice: 25000000, passiveIncome: 500000 },
+      { id: 2, name: 'Vàng SJC 1 lượng', type: 'vàng', costPrice: 80000000, currentPrice: 85000000, passiveIncome: 0 }
+    ],
+    log: {},
+    ui: { idleHide: 60 }
+  };
+
+  let state = JSON.parse(localStorage.getItem('locOS_state')) || JSON.parse(JSON.stringify(defaultState));
+  if (!state.user) state.user = { name: 'Lộc' };
+  if (!state.goals) state.goals = { monthlyIncome: 10000000, assetGoal: 500000000 };
+  if (!state.assets) state.assets = [];
+  if (!state.log) state.log = {};
+  if (!state.ui) state.ui = { idleHide: 60 };
+  state.transactions.forEach((t, i) => { if (!t.id) t.id = Date.now() + i; });
+
+  function saveState() { localStorage.setItem('locOS_state', JSON.stringify(state)); }
+
+  let activeProjectId = null;
+
+  const fmt = v => Number(v).toLocaleString('vi-VN') + ' ₫';
+
+  // Ma trận hoạt động (mỗi năm một card, dữ liệu thật trong state.log)
+  const MONTHS = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+  let selectedDay = null;
+  let selectedYear = null; // null = năm hiện tại
+
+  function dateKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function levelOf(n) { return n >= 6 ? 4 : n >= 4 ? 3 : n >= 2 ? 2 : n >= 1 ? 1 : 0; }
+  function fmtDay(key) { return `${key.slice(8)}/${key.slice(5, 7)}/${key.slice(0, 4)}`; }
+
+  function logActivity(delta = 1, key = dateKey(new Date())) {
+    const n = Math.max(0, (state.log[key] || 0) + delta);
+    if (n === 0) delete state.log[key]; else state.log[key] = n;
+    saveState();
+    renderYears();
+  }
+
+  // Năm hiện tại: 12 tháng gần nhất (kết thúc hôm nay). Năm cũ: cả năm dương lịch.
+  function viewRange(y, now) {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (y === today.getFullYear()) {
+      const start = new Date(today);
+      start.setDate(today.getDate() - today.getDay() - 52 * 7); // bắt đầu từ Chủ nhật, đủ 53 tuần
+      return { start, end: today, rolling: true };
+    }
+    return { start: new Date(y, 0, 1), end: new Date(y, 11, 31), rolling: false };
+  }
+
+  function renderYears() {
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    const todayKey = dateKey(now);
+    const logYears = Object.keys(state.log).map(k => Number(k.slice(0, 4)));
+    const firstYear = Math.min(2025, thisYear, ...logYears);
+    const years = [];
+    for (let yy = thisYear; yy >= firstYear; yy--) years.push(yy);
+
+    const y = (selectedYear !== null && years.includes(selectedYear)) ? selectedYear : thisYear;
+    const { start, end, rolling } = viewRange(y, now);
+    const offset = start.getDay(); // Chủ nhật = hàng 1
+
+    let cells = '', months = '', total = 0;
+    for (let i = 0; ; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (d > end) break;
+      const key = dateKey(d);
+      const n = state.log[key] || 0;
+      total += n;
+      const col = Math.floor((i + offset) / 7) + 1;
+      const row = (i + offset) % 7 + 1;
+      if (d.getDate() === 1) months += `<span style="grid-column:${col}">${MONTHS[d.getMonth()]}</span>`;
+      const cls = 'cell l' + levelOf(n) + (key > todayKey ? ' future' : '') + (key === todayKey ? ' today' : '') + (key === selectedDay ? ' sel' : '');
+      const label = `${fmtDay(key)}: ${n} hoạt động`;
+      cells += `<button class="${cls}" style="grid-column:${col};grid-row:${row}" data-day="${key}" title="${label}" aria-label="${label}"></button>`;
+    }
+
+    const title = rolling ? `${total} hoạt động trong năm qua` : `${total} hoạt động trong năm ${y}`;
+    const info = selectedDay
+      ? `<span class="note">${fmtDay(selectedDay)} · ${state.log[selectedDay] || 0} hoạt động</span>
+         <span><button class="button ghost" data-log="1">+1</button><button class="button ghost" data-log="-1">−1</button></span>`
+      : `<span class="note">Chọn một ô để xem ngày</span>`;
+    const yearBtns = years.map(yy => `<button class="year-btn${yy === y ? ' active' : ''}" data-year="${yy}">${yy}</button>`).join('');
+
+    const prev = $('.matrix-scroll');
+    const prevLeft = prev ? prev.scrollLeft : 0;
+
+    $('#yearCards').innerHTML = `
+      <div class="graph-title">${title}</div>
+      <div class="year-layout">
+        <section class="panel">
+          <div class="matrix-scroll" data-view="${y}">
+            <div class="matrix-frame">
+              <div class="wd"><span style="grid-row:2">T2</span><span style="grid-row:4">T4</span><span style="grid-row:6">T6</span></div>
+              <div>
+                <div class="months">${months}</div>
+                <div class="matrix">${cells}</div>
+              </div>
+            </div>
+          </div>
+          <div class="matrix-bottom">
+            <div style="display:flex;align-items:center;gap:8px;">${info}</div>
+            <div class="legend">Ít <i class="cell"></i><i class="cell l1"></i><i class="cell l2"></i><i class="cell l3"></i><i class="cell l4"></i> Nhiều</div>
+          </div>
+        </section>
+        <div class="year-list">${yearBtns}</div>
+      </div>`;
+
+    const el = $('.matrix-scroll');
+    el.scrollLeft = (prev && prev.dataset.view === String(y)) ? prevLeft : (rolling ? el.scrollWidth : 0);
+  }
+
+  function setHeading() {
+    $('#welcomeHeading').textContent = `Xin chào, ${state.user.name}.`;
+  }
+  $('#today').textContent = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+  setHeading();
+  $('#settingsName').value = state.user.name;
+
+  // Hình nền tiêu đề trang (ảnh/video lưu trong IndexedDB)
+  const HERO_PAGES = [['dashboard', 'Tổng quan'], ['tasks', 'Công việc'], ['projects', 'Dự án'], ['finance', 'Tài chính'], ['settings', 'Cài đặt']];
+  const HERO_MAX = 50 * 1024 * 1024;
+  const hero = {};
+  let heroTarget = null;
+
+  async function heroStore(mode, fn) {
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open('locOS_media', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('hero');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('hero', mode);
+      const req = fn(tx.objectStore('hero'));
+      tx.oncomplete = () => resolve(req ? req.result : undefined);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  const heroKind = blob => blob.type.startsWith('video/') ? 'video' : 'image';
+
+  async function setHero(key, file) {
+    await heroStore('readwrite', s => s.put({ blob: file, name: file.name }, key));
+    if (hero[key]) URL.revokeObjectURL(hero[key].url);
+    hero[key] = { url: URL.createObjectURL(file), kind: heroKind(file), name: file.name, sig: file.name + '|' + file.size + '|' + file.lastModified };
+  }
+  async function clearHero(key) {
+    await heroStore('readwrite', s => s.delete(key));
+    if (hero[key]) URL.revokeObjectURL(hero[key].url);
+    delete hero[key];
+  }
+  async function loadHeroes() {
+    try {
+      for (const [key] of HERO_PAGES) {
+        const rec = await heroStore('readonly', s => s.get(key));
+        if (rec && rec.blob) hero[key] = { url: URL.createObjectURL(rec.blob), kind: heroKind(rec.blob), name: rec.name, sig: rec.name + '|' + rec.blob.size + '|' + rec.blob.lastModified };
+      }
+    } catch (err) { /* trình duyệt không hỗ trợ lưu: bỏ qua */ }
+    applyHeroes();
+    renderHeroSettings();
+  }
+
+  let currentView = 'dashboard';
+
+  function applyHeroes() {
+    const layer = $('#bgLayer');
+    const m = hero[currentView];
+    document.body.classList.toggle('has-bg', !!m);
+    const sig = m ? m.sig : '';
+    if (layer.dataset.sig === sig) return;
+    layer.dataset.sig = sig;
+    layer.replaceChildren();
+    if (!m) return;
+    if (m.kind === 'video') {
+      const v = document.createElement('video');
+      v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+      v.src = m.url;
+      layer.append(v);
+      v.play().catch(() => {});
+    } else {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.src = m.url;
+      layer.append(img);
+    }
+  }
+
+  function renderHeroSettings() {
+    const el = $('#heroSettings');
+    if (!el) return;
+    const row = (key, label, status, hasMedia) => `
+      <div class="hero-row">
+        <div><div>${label}</div><div class="note">${escapeHTML(status)}</div></div>
+        <div style="display:flex;gap:8px;">
+          <button class="button" data-hero-pick="${key}">Chọn</button>
+          <button class="button ghost" data-hero-clear="${key}" ${hasMedia ? '' : 'disabled'}>Xóa</button>
+        </div>
+      </div>`;
+    el.innerHTML = row('all', 'Tất cả trang', 'Dùng chung một ảnh hoặc video', Object.keys(hero).length > 0) +
+      HERO_PAGES.map(([k, label]) => row(k, label, hero[k] ? (hero[k].kind === 'video' ? 'Video' : 'Ảnh') + ' · ' + hero[k].name : 'Mặc định', !!hero[k])).join('');
+  }
+
+  $('#heroFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file || !heroTarget) return;
+    if (!/^(image|video)\//.test(file.type)) { showToast('Chỉ hỗ trợ ảnh hoặc video'); return; }
+    if (file.size > HERO_MAX) { showToast('File quá lớn (tối đa 50MB)'); return; }
+    try {
+      const keys = heroTarget === 'all' ? HERO_PAGES.map(p => p[0]) : [heroTarget];
+      for (const key of keys) await setHero(key, file);
+      applyHeroes();
+      renderHeroSettings();
+      showToast('Đã đổi hình nền');
+    } catch (err) { showToast('Trình duyệt không lưu được file này'); }
+  });
+
+  // Ẩn / hiện giao diện
+  let lastActive = Date.now();
+  const uiHidden = () => document.body.classList.contains('ui-hidden');
+
+  function hideUI() {
+    if (uiHidden() || modalOverlay.classList.contains('open')) return;
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    document.body.classList.add('ui-hidden');
+  }
+  function showUI() {
+    if (!uiHidden()) return;
+    lastActive = Date.now();
+    document.body.classList.remove('ui-hidden');
+  }
+
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll'].forEach(ev =>
+    window.addEventListener(ev, () => { if (!uiHidden()) lastActive = Date.now(); }, { passive: true }));
+
+  document.addEventListener('keydown', e => {
+    if (uiHidden() && e.key === 'Enter') { e.preventDefault(); showUI(); }
+  }, true);
+
+  setInterval(() => {
+    const sec = (state.ui && state.ui.idleHide) || 0;
+    if (sec && !uiHidden() && Date.now() - lastActive >= sec * 1000) hideUI();
+  }, 1000);
+
+  $('#hideUiBtn').addEventListener('click', hideUI);
+  $('#idleHide').value = String(state.ui.idleHide);
+  $('#idleHide').addEventListener('change', e => {
+    state.ui.idleHide = Number(e.target.value) || 0;
+    lastActive = Date.now();
+    saveState();
+    showToast(state.ui.idleHide ? 'Đã bật tự ẩn giao diện' : 'Đã tắt tự ẩn giao diện');
+  });
+
+  // Sửa / xóa dữ liệu đã nhập
+  const TASK_TAGS = ['Học tập', 'Project', 'Tài chính', 'Đời thường'];
+  const ASSET_TYPES = [['chứng khoán', 'Chứng khoán'], ['vàng', 'Vàng'], ['tiền ảo', 'Tiền ảo'], ['cho thuê', 'Cho thuê'], ['kinh doanh', 'Kinh doanh'], ['khác', 'Khác']];
+  const optionsHTML = (list, selected) => list.map(([v, l]) => `<option value="${escapeHTML(v)}" ${v === selected ? 'selected' : ''}>${escapeHTML(l)}</option>`).join('');
+
+  function confirmModal(title, message, onConfirm) {
+    openModal(title, `<p style="margin:0;color:var(--muted)">${escapeHTML(message)}</p>`, () => { onConfirm(); return true; });
+  }
+
+  function openTaskEditor(id) {
+    const t = state.tasks.find(x => x.id === id);
+    if (!t) return;
+    const stat = t.status === 'done' ? 'done' : (t.inProgress ? 'doing' : 'todo');
+    openModal('Sửa công việc', `
+      <div class="form-group"><label>Tiêu đề</label><input id="eTaskTitle" value="${escapeHTML(t.title)}" /></div>
+      <div class="form-group"><label>Mô tả / Thời lượng</label><input id="eTaskMeta" value="${escapeHTML(t.meta)}" /></div>
+      <div class="form-group"><label>Phân loại</label><select id="eTaskTag">${optionsHTML(TASK_TAGS.map(x => [x, x]), t.tag)}</select></div>
+      <div class="form-group" id="eProjGroup" style="display:${t.tag === 'Project' ? 'block' : 'none'}"><label>Thuộc dự án</label><select id="eTaskProject"><option value="">Không có</option>${optionsHTML(state.projects.map(p => [p.title, p.title]), t.projectTitle)}</select></div>
+      <div class="form-group"><label>Trạng thái</label><select id="eTaskStat">${optionsHTML([['todo', 'Chưa làm'], ['doing', 'Đang làm'], ['done', 'Hoàn thành']], stat)}</select></div>
+    `, () => {
+      const title = $('#eTaskTitle').value.trim();
+      if (!title) { showToast('Vui lòng nhập tiêu đề'); return false; }
+      const wasDone = t.status === 'done';
+      t.title = title;
+      t.meta = $('#eTaskMeta').value.trim();
+      t.tag = $('#eTaskTag').value;
+      t.projectTitle = t.tag === 'Project' ? $('#eTaskProject').value : '';
+      const st = $('#eTaskStat').value;
+      t.status = st === 'done' ? 'done' : 'open';
+      t.inProgress = st === 'doing';
+      saveState(); renderTasks(); renderProjects();
+      if (!wasDone && t.status === 'done') logActivity(1);
+      else if (wasDone && t.status !== 'done') logActivity(-1);
+      showToast('Đã cập nhật công việc');
+      return true;
+    });
+    $('#eTaskTag').addEventListener('change', e => {
+      $('#eProjGroup').style.display = e.target.value === 'Project' ? 'block' : 'none';
+    });
+  }
+
+  function openProjectEditor(id) {
+    const p = state.projects.find(x => x.id === id);
+    if (!p) return;
+    openModal('Sửa dự án', `
+      <div class="form-group"><label>Tên dự án</label><input id="eProjTitle" value="${escapeHTML(p.title)}" /></div>
+      <div class="form-group"><label>Công nghệ / Mô tả</label><input id="eProjDesc" value="${escapeHTML(p.desc)}" /></div>
+      <div class="form-group"><label>Tiến độ (%)</label><input id="eProjProg" type="number" min="0" max="100" value="${p.progress}" /></div>
+    `, () => {
+      const title = $('#eProjTitle').value.trim();
+      if (!title) { showToast('Vui lòng nhập tên dự án'); return false; }
+      if (state.projects.some(x => x.id !== p.id && x.title.toLowerCase() === title.toLowerCase())) { showToast('Tên dự án đã tồn tại'); return false; }
+      const oldTitle = p.title;
+      p.title = title;
+      p.desc = $('#eProjDesc').value.trim() || 'Development';
+      p.progress = Math.min(100, Math.max(0, Number($('#eProjProg').value) || 0));
+      if (oldTitle !== title) {
+        state.tasks.forEach(t => { if (t.projectTitle === oldTitle) t.projectTitle = title; });
+        if (activeProjectId === oldTitle) activeProjectId = title;
+      }
+      saveState(); renderTasks(); renderProjects();
+      showToast('Đã cập nhật dự án');
+      return true;
+    });
+  }
+
+  function openAssetEditor(id) {
+    const a = state.assets.find(x => x.id === id);
+    if (!a) return;
+    const types = ASSET_TYPES.some(([v]) => v === a.type) ? ASSET_TYPES : [[a.type, a.type], ...ASSET_TYPES];
+    openModal('Sửa tài sản', `
+      <div class="form-group"><label>Tên tài sản</label><input id="eAstName" value="${escapeHTML(a.name)}" /></div>
+      <div class="form-group"><label>Phân loại</label><select id="eAstType">${optionsHTML(types, a.type)}</select></div>
+      <div class="form-group"><label>Giá vốn (VND)</label><input id="eAstCost" type="number" value="${Number(a.costPrice)}" /></div>
+      <div class="form-group"><label>Giá hiện tại (VND)</label><input id="eAstCurrent" type="number" value="${Number(a.currentPrice)}" /></div>
+      <div class="form-group"><label>Thu nhập thụ động (VND/tháng)</label><input id="eAstPassive" type="number" value="${Number(a.passiveIncome || 0)}" /></div>
+    `, () => {
+      const name = $('#eAstName').value.trim();
+      const cost = $('#eAstCost').value;
+      const cur = $('#eAstCurrent').value;
+      if (!name || cost === '' || cur === '' || isNaN(Number(cost)) || isNaN(Number(cur))) { showToast('Vui lòng nhập đầy đủ thông tin'); return false; }
+      a.name = name;
+      a.type = $('#eAstType').value;
+      a.costPrice = Number(cost);
+      a.currentPrice = Number(cur);
+      a.passiveIncome = Number($('#eAstPassive').value) || 0;
+      saveState(); renderFinance();
+      showToast('Đã cập nhật tài sản');
+      return true;
+    });
+  }
+
+  function openTransactionEditor(id) {
+    const tr = state.transactions.find(x => x.id === id);
+    if (!tr) return;
+    const catOptions = (type, selected) => {
+      const html = type === 'Income' ? incomeCats : expenseCats;
+      const mark = `value="${escapeHTML(selected)}"`;
+      return html.includes(mark) ? html.replace(mark, mark + ' selected')
+        : `<option value="${escapeHTML(selected)}" selected>${escapeHTML(selected)}</option>` + html;
+    };
+    openModal('Sửa giao dịch', `
+      <div class="form-group"><label>Tên giao dịch</label><input id="eTrName" value="${escapeHTML(tr.name)}" /></div>
+      <div class="form-group"><label>Loại</label><select id="eTrType">${optionsHTML([['Expense', 'Chi tiêu'], ['Income', 'Thu nhập']], tr.type)}</select></div>
+      <div class="form-group"><label>Danh mục</label><select id="eTrCat">${catOptions(tr.type, tr.category)}</select></div>
+      <div class="form-group"><label>Số tiền (VND)</label><input id="eTrAmount" type="number" value="${Number(tr.amount)}" /></div>
+      <div class="form-group"><label>Ngày (dd/mm)</label><input id="eTrDate" value="${escapeHTML(tr.date)}" /></div>
+    `, () => {
+      const name = $('#eTrName').value.trim();
+      const amount = Number($('#eTrAmount').value);
+      const date = $('#eTrDate').value.trim();
+      if (!name || isNaN(amount) || amount <= 0) { showToast('Vui lòng nhập đầy đủ thông tin'); return false; }
+      if (!/^\d{1,2}\/\d{1,2}$/.test(date)) { showToast('Ngày cần có dạng dd/mm'); return false; }
+      tr.name = name;
+      tr.type = $('#eTrType').value;
+      tr.category = $('#eTrCat').value;
+      tr.amount = amount;
+      tr.date = date;
+      saveState(); renderFinance();
+      showToast('Đã cập nhật giao dịch');
+      return true;
+    });
+    $('#eTrType').addEventListener('change', e => {
+      $('#eTrCat').innerHTML = e.target.value === 'Income' ? incomeCats : expenseCats;
+    });
+  }
+
+  // Điều hướng
+  function go(view) {
+    if (view === 'projects') activeProjectId = null;
+    currentView = view;
+    applyHeroes();
+    $$('.view').forEach(v => v.classList.toggle('active', v.id === `view-${view}`));
+    $$('.nav button[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    if (view === 'projects') renderProjects();
+    window.scrollTo({ top: 0 });
+  }
+  $$('.nav button[data-view]').forEach(b => b.addEventListener('click', () => { showUI(); go(b.dataset.view); }));
+  $$('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+
+  function showToast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function escapeHTML(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  // Công việc
+  function renderTasks() {
+    const taskMarkup = t => `
+      <div class="task-row ${t.status === 'done' ? 'done' : ''}">
+        <input class="check" type="checkbox" data-task-id="${t.id}" ${t.status === 'done' ? 'checked' : ''} aria-label="Hoàn thành công việc">
+        <div>
+          <div class="task-title">${escapeHTML(t.title)}</div>
+          <div class="task-meta">${escapeHTML(t.meta)}${t.projectTitle ? ' · ' + escapeHTML(t.projectTitle) : ''}</div>
+        </div>
+        <span class="tag">${escapeHTML(t.tag)}</span>
+        <button class="button ghost" data-edit-task="${t.id}">Sửa</button>
+        <button class="button ghost" data-delete-task="${t.id}" aria-label="Xóa">✕</button>
+      </div>`;
+
+    $('#dashboardTasks').innerHTML = state.tasks.slice(0, 5).map(taskMarkup).join('') || '<div class="empty-note">Không có công việc nào.</div>';
+
+    const q = ($('#taskSearch').value || '').toLowerCase();
+    const filterCat = $('#taskFilterCategory').value;
+    const filter = $('#taskFilter').value;
+    const shown = state.tasks.filter(t => {
+      const matchQ = (t.title + ' ' + t.meta + ' ' + t.tag + ' ' + (t.projectTitle || '')).toLowerCase().includes(q);
+      const matchCat = filterCat === 'all' || t.tag === filterCat;
+      const matchStat = filter === 'all' || (filter === 'done' ? t.status === 'done' : t.status !== 'done');
+      return matchQ && matchCat && matchStat;
+    });
+    $('#allTasks').innerHTML = shown.length ? shown.map(taskMarkup).join('') : '<div class="empty-note">Không tìm thấy công việc phù hợp.</div>';
+
+    const doneCount = state.tasks.filter(t => t.status === 'done').length;
+    const totalCount = state.tasks.length;
+    $('#taskTotal').textContent = totalCount;
+    $('#taskDone').textContent = doneCount;
+    $('#taskPending').textContent = totalCount - doneCount;
+    $('#taskRate').textContent = totalCount ? Math.round(doneCount / totalCount * 100) + '%' : '0%';
+    $('#dashTaskStat').textContent = `${doneCount}/${totalCount}`;
+  }
+
+  // Dự án
+  function renderProjects() {
+    const mainContainer = $('#projectsMainContainer');
+    const detailContainer = $('#projectDetailContainer');
+
+    const projectMarkup = p => `
+      <div class="project-row" data-open-project="${escapeHTML(p.title)}">
+        <div>
+          <div class="project-title">${escapeHTML(p.title)}</div>
+          <div class="project-desc">${escapeHTML(p.desc)}</div>
+          <div class="progress"><span style="width:${p.progress}%"></span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="note">${p.progress}%</span>
+          <button class="button ghost" data-edit-project="${p.id}">Sửa</button>
+          <button class="button ghost" data-delete-project="${p.id}" aria-label="Xóa">✕</button>
+        </div>
+      </div>`;
+
+    $('#dashProjectsList').innerHTML = state.projects.map(projectMarkup).join('') || '<div class="empty-note">Chưa có dự án.</div>';
+    $('#dashProjectCount').textContent = state.projects.length;
+
+    if (activeProjectId === null) {
+      mainContainer.style.display = 'block';
+      detailContainer.style.display = 'none';
+      $('#projectsListFull').innerHTML = state.projects.map(projectMarkup).join('') || '<div class="empty-note">Chưa có dự án.</div>';
+      return;
+    }
+
+    mainContainer.style.display = 'none';
+    detailContainer.style.display = 'block';
+
+    const proj = state.projects.find(p => p.title === activeProjectId);
+    if (!proj) { activeProjectId = null; renderProjects(); return; }
+
+    const pTasks = state.tasks.filter(t => t.projectTitle === proj.title);
+    const todoTasks = pTasks.filter(t => t.status === 'open' && !t.inProgress);
+    const doingTasks = pTasks.filter(t => t.status === 'open' && t.inProgress);
+    const doneTasks = pTasks.filter(t => t.status === 'done');
+
+    const renderCard = t => `
+      <div class="card" data-edit-task="${t.id}">
+        <div style="font-size:13px;">${escapeHTML(t.title)}</div>
+        <div class="task-meta">${escapeHTML(t.meta)}</div>
+      </div>`;
+
+    detailContainer.innerHTML = `
+      <div class="page-head">
+        <div>
+          <button class="button ghost" id="backToProjectsList" style="padding-left:0">← Danh sách dự án</button>
+          <h1>${escapeHTML(proj.title)}</h1>
+          <div class="subtitle">${escapeHTML(proj.desc)} · ${proj.progress}%</div>
+        </div>
+        <div style="display:flex;gap:8px;"><button class="button" data-edit-project="${proj.id}">Sửa dự án</button><button class="button primary" id="addProjTaskBtn">+ Thêm task</button></div>
+      </div>
+      <div class="kanban">
+        <div class="panel"><div class="panel-head"><h2>Chưa làm</h2><span class="tag">${todoTasks.length}</span></div>${todoTasks.map(renderCard).join('') || '<div class="empty-note">Trống</div>'}</div>
+        <div class="panel"><div class="panel-head"><h2>Đang làm</h2><span class="tag">${doingTasks.length}</span></div>${doingTasks.map(renderCard).join('') || '<div class="empty-note">Trống</div>'}</div>
+        <div class="panel"><div class="panel-head"><h2>Hoàn thành</h2><span class="tag">${doneTasks.length}</span></div>${doneTasks.map(renderCard).join('') || '<div class="empty-note">Trống</div>'}</div>
+      </div>`;
+
+    applyHeroes();
+    $('#backToProjectsList').addEventListener('click', () => { activeProjectId = null; renderProjects(); });
+
+    $('#addProjTaskBtn').addEventListener('click', () => {
+      openModal(`Thêm task vào ${proj.title}`, `
+        <div class="form-group"><label>Tiêu đề</label><input id="mpTaskTitle" /></div>
+        <div class="form-group"><label>Mô tả / Thời lượng</label><input id="mpTaskMeta" value="45 phút" /></div>
+        <div class="form-group"><label>Trạng thái</label><select id="mpTaskStatus"><option value="todo">Chưa làm</option><option value="doing">Đang làm</option><option value="done">Hoàn thành</option></select></div>
+      `, () => {
+        const title = $('#mpTaskTitle').value.trim();
+        const meta = $('#mpTaskMeta').value.trim();
+        const statChoice = $('#mpTaskStatus').value;
+        if (!title) { showToast('Vui lòng nhập tiêu đề'); return false; }
+        state.tasks.unshift({
+          id: Date.now(), title, meta: meta || 'Task', tag: 'Project', projectTitle: proj.title,
+          status: statChoice === 'done' ? 'done' : 'open',
+          inProgress: statChoice === 'doing'
+        });
+        saveState(); renderTasks(); renderProjects();
+        logActivity();
+        showToast('Đã thêm task');
+        return true;
+      });
+    });
+  }
+
+  // Tài chính
+  function renderFinance() {
+    let income = 0, expense = 0;
+    $('#transactionsTable').innerHTML = state.transactions.map(tr => {
+      if (tr.type === 'Income') income += tr.amount; else expense += tr.amount;
+      return `<tr>
+        <td class="muted">${escapeHTML(tr.date)}</td>
+        <td>${escapeHTML(tr.name)}</td>
+        <td class="muted">${escapeHTML(tr.category)}</td>
+        <td>${tr.type === 'Income' ? 'Thu' : 'Chi'}</td>
+        <td>${tr.type === 'Income' ? '+' : '−'}${fmt(Math.abs(tr.amount))}</td>
+        <td style="white-space:nowrap"><button class="button ghost" data-edit-tx="${tr.id}">Sửa</button><button class="button ghost" data-delete-tx="${tr.id}">Xóa</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" class="empty-note">Chưa có giao dịch.</td></tr>';
+
+    let totalAsset = 0;
+    $('#assetsTableBody').innerHTML = state.assets.map(ast => {
+      totalAsset += Number(ast.currentPrice) || 0;
+      const diff = Number(ast.costPrice) > 0 ? (((Number(ast.currentPrice) - Number(ast.costPrice)) / Number(ast.costPrice)) * 100).toFixed(2) : 0;
+      return `<tr>
+        <td>${escapeHTML(ast.name)}</td>
+        <td class="muted">${escapeHTML(ast.type)}</td>
+        <td>${fmt(ast.costPrice)}</td>
+        <td>${fmt(ast.currentPrice)}</td>
+        <td>${diff >= 0 ? '+' : ''}${diff}%</td>
+        <td>${fmt(ast.passiveIncome || 0)}</td>
+        <td style="white-space:nowrap"><button class="button ghost" data-edit-asset="${ast.id}">Sửa</button><button class="button ghost" data-delete-asset="${ast.id}">Xóa</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="empty-note">Chưa có tài sản.</td></tr>';
+
+    const goalIncome = state.goals.monthlyIncome;
+    const goalAsset = state.goals.assetGoal;
+
+    $('#finIncome').textContent = (income / 1000000).toFixed(2) + 'M';
+    $('#statGoalIncome').textContent = (goalIncome / 1000000).toFixed(2) + 'M ₫';
+    $('#finExpense').textContent = (expense / 1000000).toFixed(2) + 'M';
+    $('#finTotalAsset').textContent = fmt(totalAsset);
+    $('#finGoalAssetShow').textContent = (goalAsset / 1000000).toFixed(1) + 'M ₫';
+    const rate = goalAsset > 0 ? Math.min(100, Math.round((totalAsset / goalAsset) * 100)) : 0;
+    $('#finGoalAssetComp').textContent = `Đạt ${rate}%`;
+
+    const net = income - expense;
+    $('#dashNetCash').textContent = (net >= 0 ? '+' : '−') + fmt(Math.abs(net));
+    $('#dashAssets').textContent = fmt(totalAsset);
+    $('#dashIncome').textContent = fmt(income);
+    $('#dashExpense').textContent = fmt(expense);
+    $('#dashExpenseBar').style.width = (income > 0 ? Math.min(100, Math.round(expense / income * 100)) : 0) + '%';
+  }
+
+  // Sự kiện chung
+  document.addEventListener('change', e => {
+    if (e.target.matches('[data-task-id]')) {
+      const task = state.tasks.find(t => t.id === Number(e.target.dataset.taskId));
+      if (task) {
+        task.status = e.target.checked ? 'done' : 'open';
+        if (task.status === 'done') task.inProgress = false;
+        saveState(); renderTasks();
+        logActivity(task.status === 'done' ? 1 : -1);
+        if (activeProjectId !== null) renderProjects();
+      }
+    }
+  });
+
+  document.addEventListener('click', e => {
+    const heroPick = e.target.closest('[data-hero-pick]');
+    if (heroPick) { heroTarget = heroPick.dataset.heroPick; $('#heroFile').click(); return; }
+    const heroClear = e.target.closest('[data-hero-clear]');
+    if (heroClear) {
+      const k = heroClear.dataset.heroClear;
+      (async () => {
+        try {
+          for (const key of (k === 'all' ? HERO_PAGES.map(p => p[0]) : [k])) await clearHero(key);
+          applyHeroes();
+          renderHeroSettings();
+          showToast('Đã xóa hình nền');
+        } catch (err) { showToast('Không xóa được hình nền'); }
+      })();
+      return;
+    }
+    const yearBtn = e.target.closest('[data-year]');
+    if (yearBtn) {
+      const yy = Number(yearBtn.dataset.year);
+      selectedYear = yy === new Date().getFullYear() ? null : yy;
+      selectedDay = null;
+      renderYears();
+      return;
+    }
+    const dayCell = e.target.closest('[data-day]');
+    if (dayCell) { selectedDay = dayCell.dataset.day; renderYears(); return; }
+    const logBtn = e.target.closest('[data-log]');
+    if (logBtn && selectedDay) { logActivity(Number(logBtn.dataset.log), selectedDay); return; }
+    const delTask = e.target.closest('[data-delete-task]');
+    if (delTask) {
+      const taskId = Number(delTask.dataset.deleteTask);
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      // Xóa task và trừ hoạt động trong ma trận nếu task đã hoàn thành
+      state.tasks = state.tasks.filter(t => t.id !== taskId);
+      if (task.status === 'done') {
+        logActivity(-1);
+      }
+      saveState();
+      renderTasks();
+      if (activeProjectId !== null) {
+        renderProjects();
+      }
+      showToast('Đã xóa công việc');
+      return;
+    }
+    const delProj = e.target.closest('[data-delete-project]');
+    if (delProj) {
+      const id = Number(delProj.dataset.deleteProject);
+      const proj = state.projects.find(p => p.id === id);
+      if (proj) confirmModal('Xóa dự án', `Xóa dự án "${proj.title}"? Các công việc thuộc dự án vẫn được giữ lại nhưng không còn gắn với dự án.`, () => {
+        state.tasks.forEach(t => { if (t.projectTitle === proj.title) t.projectTitle = ''; });
+        state.projects = state.projects.filter(p => p.id !== id);
+        if (activeProjectId === proj.title) activeProjectId = null;
+        saveState(); renderTasks(); renderProjects();
+        showToast('Đã xóa dự án');
+      });
+      return;
+    }
+    const delAsset = e.target.closest('[data-delete-asset]');
+    if (delAsset) {
+      const id = Number(delAsset.dataset.deleteAsset);
+      const ast = state.assets.find(a => a.id === id);
+      if (ast) confirmModal('Xóa tài sản', `Xóa tài sản "${ast.name}"?`, () => {
+        state.assets = state.assets.filter(a => a.id !== id);
+        saveState(); renderFinance();
+        showToast('Đã xóa tài sản');
+      });
+      return;
+    }
+    const editProj = e.target.closest('[data-edit-project]');
+    if (editProj) { openProjectEditor(Number(editProj.dataset.editProject)); return; }
+    const editAsset = e.target.closest('[data-edit-asset]');
+    if (editAsset) { openAssetEditor(Number(editAsset.dataset.editAsset)); return; }
+    const editTx = e.target.closest('[data-edit-tx]');
+    if (editTx) { openTransactionEditor(Number(editTx.dataset.editTx)); return; }
+    const delTx = e.target.closest('[data-delete-tx]');
+    if (delTx) {
+      const id = Number(delTx.dataset.deleteTx);
+      const tx = state.transactions.find(t => t.id === id);
+      if (tx) confirmModal('Xóa giao dịch', `Xóa giao dịch "${tx.name}"?`, () => {
+        state.transactions = state.transactions.filter(t => t.id !== id);
+        saveState(); renderFinance();
+        showToast('Đã xóa giao dịch');
+      });
+      return;
+    }
+    const openProj = e.target.closest('[data-open-project]');
+    if (openProj) {
+      activeProjectId = openProj.getAttribute('data-open-project');
+      go('projects');
+      activeProjectId = openProj.getAttribute('data-open-project');
+      renderProjects();
+      return;
+    }
+    const editCard = e.target.closest('[data-edit-task]');
+    if (editCard) { openTaskEditor(Number(editCard.dataset.editTask)); return; }
+  });
+
+  $('#taskSearch').addEventListener('input', renderTasks);
+  $('#taskFilterCategory').addEventListener('change', renderTasks);
+  $('#taskFilter').addEventListener('change', renderTasks);
+
+  // Modal
+  const modalOverlay = $('#modalOverlay');
+  let modalCallback = null;
+  function openModal(title, html, callback) {
+    $('#modalTitle').textContent = title;
+    $('#modalBody').innerHTML = html;
+    modalOverlay.classList.add('open');
+    modalCallback = callback;
+    const first = $('#modalBody input, #modalBody select');
+    if (first) first.focus();
+  }
+  function closeModal() { modalOverlay.classList.remove('open'); modalCallback = null; }
+  $('#modalCancel').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+  $('#modalSubmit').addEventListener('click', () => { if (modalCallback && modalCallback()) closeModal(); });
+  modalOverlay.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); $('#modalSubmit').click(); }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  // Thêm công việc
+  function promptTaskModal() {
+    const projOptions = state.projects.map(p => `<option value="${escapeHTML(p.title)}">${escapeHTML(p.title)}</option>`).join('');
+    openModal('Thêm công việc', `
+      <div class="form-group"><label>Tiêu đề</label><input id="mTaskTitle" /></div>
+      <div class="form-group"><label>Phân loại</label><select id="mTaskTag">
+        <option value="Học tập">Học tập</option>
+        <option value="Project">Project</option>
+        <option value="Tài chính">Tài chính</option>
+        <option value="Đời thường">Đời thường</option>
+      </select></div>
+      <div class="form-group" id="projSelectGroup" style="display:none;"><label>Thuộc dự án</label><select id="mTaskProject">${projOptions}</select></div>
+      <div class="form-group"><label>Mô tả / Thời lượng</label><input id="mTaskMeta" value="30 phút" /></div>
+    `, () => {
+      const title = $('#mTaskTitle').value.trim();
+      const tag = $('#mTaskTag').value;
+      const projectTitle = tag === 'Project' ? ($('#mTaskProject').value || '') : '';
+      const meta = $('#mTaskMeta').value.trim();
+      if (!title) { showToast('Vui lòng nhập tiêu đề'); return false; }
+      state.tasks.unshift({ id: Date.now(), title, meta: meta || 'General', tag, projectTitle, status: 'open', inProgress: false });
+      saveState(); renderTasks();
+      if (activeProjectId !== null) renderProjects();
+      logActivity();
+      showToast('Đã thêm công việc');
+      return true;
+    });
+    $('#mTaskTag').addEventListener('change', e => {
+      $('#projSelectGroup').style.display = e.target.value === 'Project' ? 'block' : 'none';
+    });
+  }
+  $('#addTaskBtn').addEventListener('click', promptTaskModal);
+  $('#quickAdd').addEventListener('click', promptTaskModal);
+
+  // Thêm dự án
+  $('#addProjectBtn').addEventListener('click', () => {
+    openModal('Dự án mới', `
+      <div class="form-group"><label>Tên dự án</label><input id="mProjTitle" /></div>
+      <div class="form-group"><label>Công nghệ / Mô tả</label><input id="mProjDesc" /></div>
+      <div class="form-group"><label>Tiến độ (%)</label><input id="mProjProg" type="number" min="0" max="100" value="10" /></div>
+    `, () => {
+      const title = $('#mProjTitle').value.trim();
+      const desc = $('#mProjDesc').value.trim();
+      const progress = Number($('#mProjProg').value) || 0;
+      if (!title) { showToast('Vui lòng nhập tên dự án'); return false; }
+      if (state.projects.some(p => p.title.toLowerCase() === title.toLowerCase())) { showToast('Tên dự án đã tồn tại'); return false; }
+      state.projects.push({ id: Date.now(), title, desc: desc || 'Development', progress: Math.min(100, Math.max(0, progress)) });
+      saveState(); renderProjects();
+      logActivity();
+      showToast('Đã tạo dự án');
+      return true;
+    });
+  });
+
+  // Mục tiêu tài chính
+  $('#openGoalSettings').addEventListener('click', () => {
+    openModal('Mục tiêu tài chính', `
+      <div class="form-group"><label>Thu nhập tháng (VND)</label><input id="mGoalIncome" type="number" value="${state.goals.monthlyIncome}" /></div>
+      <div class="form-group"><label>Tổng tài sản (VND)</label><input id="mGoalAsset" type="number" value="${state.goals.assetGoal}" /></div>
+    `, () => {
+      const inc = Number($('#mGoalIncome').value);
+      const ast = Number($('#mGoalAsset').value);
+      if (isNaN(inc) || isNaN(ast)) { showToast('Vui lòng nhập số hợp lệ'); return false; }
+      state.goals.monthlyIncome = inc;
+      state.goals.assetGoal = ast;
+      saveState(); renderFinance();
+      showToast('Đã cập nhật mục tiêu');
+      return true;
+    });
+  });
+
+  // Thêm tài sản
+  $('#addAssetBtn').addEventListener('click', () => {
+    openModal('Thêm tài sản', `
+      <div class="form-group"><label>Tên tài sản</label><input id="mAstName" /></div>
+      <div class="form-group"><label>Phân loại</label><select id="mAstType">
+        <option value="chứng khoán">Chứng khoán</option>
+        <option value="vàng">Vàng</option>
+        <option value="tiền ảo">Tiền ảo</option>
+        <option value="cho thuê">Cho thuê</option>
+        <option value="kinh doanh">Kinh doanh</option>
+        <option value="khác">Khác</option>
+      </select></div>
+      <div class="form-group"><label>Giá vốn (VND)</label><input id="mAstCost" type="number" /></div>
+      <div class="form-group"><label>Giá hiện tại (VND)</label><input id="mAstCurrent" type="number" /></div>
+      <div class="form-group"><label>Thu nhập thụ động (VND/tháng)</label><input id="mAstPassive" type="number" value="0" /></div>
+    `, () => {
+      const name = $('#mAstName').value.trim();
+      const type = $('#mAstType').value;
+      const costPrice = Number($('#mAstCost').value);
+      const currentPrice = Number($('#mAstCurrent').value);
+      const passiveIncome = Number($('#mAstPassive').value) || 0;
+      if (!name || !$('#mAstCost').value || !$('#mAstCurrent').value || isNaN(costPrice) || isNaN(currentPrice)) {
+        showToast('Vui lòng nhập đầy đủ thông tin'); return false;
+      }
+      const existing = state.assets.find(a => a.name.toLowerCase() === name.toLowerCase() && a.type === type);
+      if (existing) {
+        existing.costPrice = (Number(existing.costPrice) + costPrice) / 2;
+        existing.currentPrice = currentPrice;
+        existing.passiveIncome = Number(existing.passiveIncome) + passiveIncome;
+      } else {
+        state.assets.push({ id: Date.now(), name, type, costPrice, currentPrice, passiveIncome });
+      }
+      saveState(); renderFinance();
+      logActivity();
+      showToast('Đã lưu tài sản');
+      return true;
+    });
+  });
+
+  // Thêm giao dịch
+  const expenseCats = `<option value="Ăn uống">Ăn uống</option><option value="nhà ở">Nhà ở</option><option value="mạng">Mạng</option><option value="sửa đồ">Sửa đồ</option><option value="Đi chơi">Đi chơi</option>`;
+  const incomeCats = `<option value="lương">Lương</option><option value="thu nhập thêm">Thu nhập thêm</option><option value="cho">Được cho</option>`;
+  $('#addTransactionBtn').addEventListener('click', () => {
+    openModal('Thêm giao dịch', `
+      <div class="form-group"><label>Tên giao dịch</label><input id="mTrName" /></div>
+      <div class="form-group"><label>Loại</label><select id="mTrType"><option value="Expense">Chi tiêu</option><option value="Income">Thu nhập</option></select></div>
+      <div class="form-group"><label>Danh mục</label><select id="mTrCat">${expenseCats}</select></div>
+      <div class="form-group"><label>Số tiền (VND)</label><input id="mTrAmount" type="number" /></div>
+    `, () => {
+      const name = $('#mTrName').value.trim();
+      const type = $('#mTrType').value;
+      const category = $('#mTrCat').value;
+      const amount = Number($('#mTrAmount').value);
+      if (!name || isNaN(amount) || amount <= 0) { showToast('Vui lòng nhập đầy đủ thông tin'); return false; }
+      const date = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+      state.transactions.unshift({ id: Date.now(), date, name, category, type, amount });
+      saveState(); renderFinance();
+      logActivity();
+      showToast('Đã thêm giao dịch');
+      return true;
+    });
+    $('#mTrType').addEventListener('change', e => {
+      $('#mTrCat').innerHTML = e.target.value === 'Expense' ? expenseCats : incomeCats;
+    });
+  });
+
+  // Cài đặt
+  $('#saveSettings').addEventListener('click', () => {
+    state.user.name = $('#settingsName').value.trim() || 'Lộc';
+    saveState(); setHeading();
+    showToast('Đã lưu');
+  });
+
+  $('#resetData').addEventListener('click', () => {
+    if (confirm('Khôi phục dữ liệu mẫu ban đầu? Dữ liệu hiện tại sẽ mất.')) {
+      const keepLog = state.log, keepUi = state.ui;
+      state = JSON.parse(JSON.stringify(defaultState));
+      state.log = keepLog;
+      state.ui = keepUi;
+      saveState(); setHeading();
+      $('#settingsName').value = state.user.name;
+      renderTasks(); renderProjects(); renderFinance();
+      showToast('Đã khôi phục dữ liệu mẫu');
+    }
+  });
+
+  renderTasks();
+  renderProjects();
+  renderFinance();
+  renderYears();
+
+  applyHeroes();
+  renderHeroSettings();
+  loadHeroes();
+
+  // Tự cập nhật khi sang ngày mới / năm mới (tạo card năm mới)
+  let lastDay = dateKey(new Date());
+  setInterval(() => {
+    const k = dateKey(new Date());
+    if (k !== lastDay) { lastDay = k; renderYears(); }
+  }, 30000);
+</script>
+</body>
+</html>
