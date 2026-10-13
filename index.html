@@ -87,6 +87,9 @@
   .check:checked::after { content: "✓"; color: #000; font-size: 11px; font-weight: bold; }
   .task-title { font-size: 14px; }
   .task-row.done .task-title { color: var(--muted); text-decoration: line-through; }
+  .task-row.overdue { box-shadow: inset 2px 0 0 #e5484d; background: rgba(229,72,77,.06); border-radius: var(--radius); }
+  .task-row.overdue .task-title { color: #ff9b9e; }
+  .day-list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 4px; padding-top: 14px; border-top: 1px solid var(--line); }
   .task-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .tag { display: inline-block; padding: 2px 8px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 11px; white-space: nowrap; }
 
@@ -114,6 +117,8 @@
   .kanban { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; align-items: start; }
   .card { border: 1px solid var(--line); padding: 10px; border-radius: var(--radius); margin-bottom: 8px; cursor: pointer; }
   .card:hover { border-color: #555; }
+  .card.overdue { border-color: #e5484d; box-shadow: 0 0 0 1px rgba(229,72,77,.4); }
+  .card.overdue:hover { border-color: #ff7a7d; }
 
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
   .modal-overlay.open { display: flex; }
@@ -227,7 +232,7 @@
     <!-- Công việc -->
     <section class="view" id="view-tasks">
       <div class="page-head">
-        <div><h1>Công việc</h1></div>
+        <div><h1>Công việc</h1><div class="subtitle">Chỉ hiển thị công việc hôm nay — task quá hạn xem qua ma trận.</div></div>
         <button class="button primary" id="addTaskBtn">+ Thêm công việc</button>
       </div>
       <div class="stats">
@@ -325,7 +330,13 @@
           <button class="button primary" id="saveSettings">Lưu</button>
           <button class="button" id="resetData">Khôi phục dữ liệu mẫu</button>
         </div>
-        <p class="note" style="margin-top:16px">Dữ liệu được lưu trong LocalStorage của trình duyệt.</p>
+        <p class="note" style="margin-top:16px">Dữ liệu được lưu trong các file JSON ở thư mục <code>data/</code> (bên cạnh file này).</p>
+      </section>
+
+      <section class="panel" style="max-width:480px;margin-top:16px;">
+        <div class="panel-head"><h2>Sao lưu</h2></div>
+        <p class="note" style="margin-bottom:12px">Tải toàn bộ dữ liệu (6 file JSON) về máy dưới dạng một file ZIP.</p>
+        <button class="button" id="backupBtn">Tải bản sao lưu ZIP</button>
       </section>
 
       <section class="panel" style="max-width:480px;margin-top:16px;">
@@ -372,44 +383,58 @@
   const $$ = s => [...document.querySelectorAll(s)];
 
   const defaultState = {
-    user: { name: "Lộc" },
-    goals: { monthlyIncome: 10000000, assetGoal: 500000000 },
-    tasks: [
-      { id: 1, title: 'Hoàn thiện pipeline xử lý dữ liệu', meta: '60 phút', tag: 'Project', projectTitle: 'Smart Beekeeping Farm', status: 'open' },
-      { id: 2, title: 'Đọc tài liệu RAG evaluation', meta: '30 phút', tag: 'Học tập', projectTitle: '', status: 'open' },
-      { id: 3, title: 'Thiết kế API quản lý thùng ong', meta: '90 phút', tag: 'Project', projectTitle: 'Smart Beekeeping Farm', status: 'open' },
-      { id: 4, title: 'Review kế hoạch tuần', meta: '15 phút', tag: 'Đời thường', projectTitle: '', status: 'open' },
-      { id: 5, title: 'Cập nhật README portfolio', meta: '30 phút', tag: 'Project', projectTitle: 'locOS Personal System', status: 'done' },
-      { id: 6, title: 'Ôn tập Eigenvector và PCA', meta: '45 phút', tag: 'Học tập', projectTitle: '', status: 'done' },
-      { id: 7, title: 'Lập trình IoT cảm biến nhiệt độ', meta: '60 phút', tag: 'Project', projectTitle: 'Smart Beekeeping Farm', status: 'open' }
-    ],
-    projects: [
-      { id: 1, title: 'Smart Beekeeping Farm', desc: 'IoT · AI · Flask · SQLite', progress: 35 },
-      { id: 2, title: 'Home Credit Risk', desc: 'ML · LightGBM · PostgreSQL', progress: 85 },
-      { id: 3, title: 'locOS Personal System', desc: 'HTML · CSS · JavaScript', progress: 25 },
-      { id: 4, title: 'AI Engineer Roadmap', desc: 'Learning · Portfolio · Open source', progress: 62 }
-    ],
-    transactions: [
-      { id: 1, date: '10/10', name: 'Delivery work', category: 'thu nhập thêm', type: 'Income', amount: 7520000 },
-      { id: 2, date: '03/10', name: 'Room rent', category: 'nhà ở', type: 'Expense', amount: 3000000 }
-    ],
-    assets: [
-      { id: 1, name: 'Cổ phiếu FPT', type: 'chứng khoán', costPrice: 20000000, currentPrice: 25000000, passiveIncome: 500000 },
-      { id: 2, name: 'Vàng SJC 1 lượng', type: 'vàng', costPrice: 80000000, currentPrice: 85000000, passiveIncome: 0 }
-    ],
+    user: { name: "" },
+    goals: { monthlyIncome: 0, assetGoal: 0 },
+    tasks: [],
+    projects: [],
+    transactions: [],
+    assets: [],
     log: {},
     ui: { idleHide: 60 }
   };
 
-  let state = JSON.parse(localStorage.getItem('locOS_state')) || JSON.parse(JSON.stringify(defaultState));
-  if (!state.user) state.user = { name: 'Lộc' };
-  if (!state.goals) state.goals = { monthlyIncome: 10000000, assetGoal: 500000000 };
-  if (!state.assets) state.assets = [];
-  if (!state.log) state.log = {};
-  if (!state.ui) state.ui = { idleHide: 60 };
-  state.transactions.forEach((t, i) => { if (!t.id) t.id = Date.now() + i; });
+  // State khởi tạo mặc định. Nạp thật từ server trong loadState() ở cuối script.
+  let state = JSON.parse(JSON.stringify(defaultState));
 
-  function saveState() { localStorage.setItem('locOS_state', JSON.stringify(state)); }
+  // Chuẩn hoá state: điền thiếu các trường và migrate task cũ.
+  function normalizeState(s) {
+    if (!s.user) s.user = { name: '' };
+    if (!s.goals) s.goals = { monthlyIncome: 10000000, assetGoal: 500000000 };
+    if (!Array.isArray(s.tasks)) s.tasks = [];
+    if (!Array.isArray(s.projects)) s.projects = [];
+    if (!Array.isArray(s.transactions)) s.transactions = [];
+    if (!Array.isArray(s.assets)) s.assets = [];
+    if (!s.log || typeof s.log !== 'object') s.log = {};
+    if (!s.ui) s.ui = { idleHide: 60 };
+    s.transactions.forEach((t, i) => { if (!t.id) t.id = Date.now() + i; });
+    // Migration: thêm ngày hẹn / ngày hoàn thành cho task cũ
+    s.tasks.forEach(t => {
+      if (t.dueDate === undefined) t.dueDate = null;
+      if (t.completedAt === undefined) t.completedAt = t.status === 'done' ? dateKey(new Date()) : null;
+      if (t.inProgress === undefined) t.inProgress = false;
+    });
+    return s;
+  }
+
+  // Lưu state lên server (debounce để gộp các thay đổi liên tiếp).
+  let saveTimer = null;
+  function saveState() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flushState, 120);
+  }
+  async function flushState() {
+    try {
+      const res = await fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch (err) {
+      // Không lưu được: giữ dữ liệu trong bộ nhớ và báo cho người dùng.
+      showToast('Không lưu được dữ liệu lên server');
+    }
+  }
 
   let activeProjectId = null;
 
@@ -431,6 +456,25 @@
     if (n === 0) delete state.log[key]; else state.log[key] = n;
     saveState();
     renderYears();
+  }
+
+  // Quy tắc "hôm nay": task không xong → hiện nếu không hẹn ngày hoặc hẹn đúng ngày đó;
+  // task đã xong → chỉ hiện trong ngày được hoàn thành.
+  function isTaskActiveOn(t, dayKey) {
+    if (t.status === 'done') return t.completedAt === dayKey;
+    return !t.dueDate || t.dueDate === dayKey;
+  }
+  function todayTasks() {
+    const key = dateKey(new Date());
+    return state.tasks.filter(t => isTaskActiveOn(t, key));
+  }
+  function overdueDays(dueDate) {
+    const today = new Date();
+    const due = new Date(dueDate + 'T00:00:00');
+    return Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - due) / 86400000);
+  }
+  function isOverdue(t) {
+    return t.status !== 'done' && !!t.dueDate && t.dueDate < dateKey(new Date());
   }
 
   // Năm hiện tại: 12 tháng gần nhất (kết thúc hôm nay). Năm cũ: cả năm dương lịch.
@@ -499,20 +543,48 @@
             <div style="display:flex;align-items:center;gap:8px;">${info}</div>
             <div class="legend">Ít <i class="cell"></i><i class="cell l1"></i><i class="cell l2"></i><i class="cell l3"></i><i class="cell l4"></i> Nhiều</div>
           </div>
+          <div id="dayTaskList"></div>
         </section>
         <div class="year-list">${yearBtns}</div>
       </div>`;
 
     const el = $('.matrix-scroll');
     el.scrollLeft = (prev && prev.dataset.view === String(y)) ? prevLeft : (rolling ? el.scrollWidth : 0);
+
+    renderDayTaskList();
+  }
+
+  // Danh sách công việc của ngày được chọn trong ma trận
+  function renderDayTaskList() {
+    const el = $('#dayTaskList');
+    if (!el) return;
+    if (!selectedDay) { el.innerHTML = ''; return; }
+    const dayTasks = state.tasks.filter(t =>
+      (t.status === 'done' && t.completedAt === selectedDay) ||
+      (t.status !== 'done' && isOverdue(t) && t.dueDate === selectedDay)
+    );
+    const rows = dayTasks.map(t => `
+      <div class="task-row ${t.status === 'done' ? 'done' : 'overdue'}">
+        <input class="check" type="checkbox" data-daytask-id="${t.id}" ${t.status === 'done' ? 'checked' : ''} aria-label="Hoàn thành công việc">
+        <div>
+          <div class="task-title">${escapeHTML(t.title)}</div>
+          <div class="task-meta">${escapeHTML(t.meta)}${t.projectTitle ? ' · ' + escapeHTML(t.projectTitle) : ''}</div>
+        </div>
+        <span class="tag">${escapeHTML(t.tag)}</span>
+        <button class="button ghost" data-edit-task="${t.id}">Sửa</button>
+        <button class="button ghost" data-delete-task="${t.id}" aria-label="Xóa">✕</button>
+      </div>`).join('');
+    el.innerHTML = `
+      <div class="day-list-head">
+        <h2>Công việc ngày ${fmtDay(selectedDay)}</h2>
+      </div>
+      ${rows || '<div class="empty-note">Không có công việc nào trong ngày này.</div>'}`;
   }
 
   function setHeading() {
     $('#welcomeHeading').textContent = `Xin chào, ${state.user.name}.`;
   }
   $('#today').textContent = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-  setHeading();
-  $('#settingsName').value = state.user.name;
 
   // Hình nền tiêu đề trang (ảnh/video lưu trong IndexedDB)
   const HERO_PAGES = [['dashboard', 'Tổng quan'], ['tasks', 'Công việc'], ['projects', 'Dự án'], ['finance', 'Tài chính'], ['settings', 'Cài đặt']];
@@ -640,7 +712,6 @@
   }, 1000);
 
   $('#hideUiBtn').addEventListener('click', hideUI);
-  $('#idleHide').value = String(state.ui.idleHide);
   $('#idleHide').addEventListener('change', e => {
     state.ui.idleHide = Number(e.target.value) || 0;
     lastActive = Date.now();
@@ -664,6 +735,7 @@
     openModal('Sửa công việc', `
       <div class="form-group"><label>Tiêu đề</label><input id="eTaskTitle" value="${escapeHTML(t.title)}" /></div>
       <div class="form-group"><label>Mô tả / Thời lượng</label><input id="eTaskMeta" value="${escapeHTML(t.meta)}" /></div>
+      <div class="form-group"><label>Ngày hẹn (để trống nếu không hẹn)</label><input type="date" id="eTaskDue" value="${t.dueDate || ''}" /></div>
       <div class="form-group"><label>Phân loại</label><select id="eTaskTag">${optionsHTML(TASK_TAGS.map(x => [x, x]), t.tag)}</select></div>
       <div class="form-group" id="eProjGroup" style="display:${t.tag === 'Project' ? 'block' : 'none'}"><label>Thuộc dự án</label><select id="eTaskProject"><option value="">Không có</option>${optionsHTML(state.projects.map(p => [p.title, p.title]), t.projectTitle)}</select></div>
       <div class="form-group"><label>Trạng thái</label><select id="eTaskStat">${optionsHTML([['todo', 'Chưa làm'], ['doing', 'Đang làm'], ['done', 'Hoàn thành']], stat)}</select></div>
@@ -671,16 +743,20 @@
       const title = $('#eTaskTitle').value.trim();
       if (!title) { showToast('Vui lòng nhập tiêu đề'); return false; }
       const wasDone = t.status === 'done';
+      const prevCompletedAt = t.completedAt;
       t.title = title;
       t.meta = $('#eTaskMeta').value.trim();
+      t.dueDate = $('#eTaskDue').value || null;
       t.tag = $('#eTaskTag').value;
       t.projectTitle = t.tag === 'Project' ? $('#eTaskProject').value : '';
       const st = $('#eTaskStat').value;
       t.status = st === 'done' ? 'done' : 'open';
       t.inProgress = st === 'doing';
-      saveState(); renderTasks(); renderProjects();
+      if (t.status === 'done') { if (!t.completedAt) t.completedAt = dateKey(new Date()); }
+      else t.completedAt = null;
+      saveState(); renderTasks(); renderProjects(); renderDayTaskList();
       if (!wasDone && t.status === 'done') logActivity(1);
-      else if (wasDone && t.status !== 'done') logActivity(-1);
+      else if (wasDone && t.status !== 'done') logActivity(-1, prevCompletedAt || dateKey(new Date()));
       showToast('Đã cập nhật công việc');
       return true;
     });
@@ -811,12 +887,12 @@
         <button class="button ghost" data-delete-task="${t.id}" aria-label="Xóa">✕</button>
       </div>`;
 
-    $('#dashboardTasks').innerHTML = state.tasks.slice(0, 5).map(taskMarkup).join('') || '<div class="empty-note">Không có công việc nào.</div>';
+    $('#dashboardTasks').innerHTML = todayTasks().slice(0, 5).map(taskMarkup).join('') || '<div class="empty-note">Không có công việc nào hôm nay.</div>';
 
     const q = ($('#taskSearch').value || '').toLowerCase();
     const filterCat = $('#taskFilterCategory').value;
     const filter = $('#taskFilter').value;
-    const shown = state.tasks.filter(t => {
+    const shown = todayTasks().filter(t => {
       const matchQ = (t.title + ' ' + t.meta + ' ' + t.tag + ' ' + (t.projectTitle || '')).toLowerCase().includes(q);
       const matchCat = filterCat === 'all' || t.tag === filterCat;
       const matchStat = filter === 'all' || (filter === 'done' ? t.status === 'done' : t.status !== 'done');
@@ -824,8 +900,8 @@
     });
     $('#allTasks').innerHTML = shown.length ? shown.map(taskMarkup).join('') : '<div class="empty-note">Không tìm thấy công việc phù hợp.</div>';
 
-    const doneCount = state.tasks.filter(t => t.status === 'done').length;
-    const totalCount = state.tasks.length;
+    const doneCount = todayTasks().filter(t => t.status === 'done').length;
+    const totalCount = todayTasks().length;
     $('#taskTotal').textContent = totalCount;
     $('#taskDone').textContent = doneCount;
     $('#taskPending').textContent = totalCount - doneCount;
@@ -868,15 +944,17 @@
     const proj = state.projects.find(p => p.title === activeProjectId);
     if (!proj) { activeProjectId = null; renderProjects(); return; }
 
-    const pTasks = state.tasks.filter(t => t.projectTitle === proj.title);
+    const pTasks = state.tasks.filter(t =>
+      t.projectTitle === proj.title && (isTaskActiveOn(t, dateKey(new Date())) || isOverdue(t))
+    );
     const todoTasks = pTasks.filter(t => t.status === 'open' && !t.inProgress);
     const doingTasks = pTasks.filter(t => t.status === 'open' && t.inProgress);
     const doneTasks = pTasks.filter(t => t.status === 'done');
 
     const renderCard = t => `
-      <div class="card" data-edit-task="${t.id}">
+      <div class="card${isOverdue(t) ? ' overdue' : ''}" data-edit-task="${t.id}">
         <div style="font-size:13px;">${escapeHTML(t.title)}</div>
-        <div class="task-meta">${escapeHTML(t.meta)}</div>
+        <div class="task-meta">${escapeHTML(t.meta)}${t.dueDate ? ` · Hạn ${fmtDay(t.dueDate)}${isOverdue(t) ? ' · quá hạn ' + overdueDays(t.dueDate) + ' ngày' : ''}` : ''}</div>
       </div>`;
 
     detailContainer.innerHTML = `
@@ -901,16 +979,20 @@
       openModal(`Thêm task vào ${proj.title}`, `
         <div class="form-group"><label>Tiêu đề</label><input id="mpTaskTitle" /></div>
         <div class="form-group"><label>Mô tả / Thời lượng</label><input id="mpTaskMeta" value="45 phút" /></div>
+        <div class="form-group"><label>Ngày hẹn (để trống nếu không hẹn)</label><input type="date" id="mpTaskDue" /></div>
         <div class="form-group"><label>Trạng thái</label><select id="mpTaskStatus"><option value="todo">Chưa làm</option><option value="doing">Đang làm</option><option value="done">Hoàn thành</option></select></div>
       `, () => {
         const title = $('#mpTaskTitle').value.trim();
         const meta = $('#mpTaskMeta').value.trim();
         const statChoice = $('#mpTaskStatus').value;
+        const dueDate = $('#mpTaskDue').value || null;
         if (!title) { showToast('Vui lòng nhập tiêu đề'); return false; }
         state.tasks.unshift({
           id: Date.now(), title, meta: meta || 'Task', tag: 'Project', projectTitle: proj.title,
           status: statChoice === 'done' ? 'done' : 'open',
-          inProgress: statChoice === 'doing'
+          inProgress: statChoice === 'doing',
+          dueDate,
+          completedAt: statChoice === 'done' ? dateKey(new Date()) : null
         });
         saveState(); renderTasks(); renderProjects();
         logActivity();
@@ -971,13 +1053,28 @@
 
   // Sự kiện chung
   document.addEventListener('change', e => {
+    if (e.target.matches('[data-daytask-id]')) {
+      const task = state.tasks.find(t => t.id === Number(e.target.dataset.daytaskId));
+      if (task) {
+        task.status = e.target.checked ? 'done' : 'open';
+        if (task.status === 'done') { task.completedAt = selectedDay || dateKey(new Date()); task.inProgress = false; }
+        else task.completedAt = null;
+        saveState(); renderTasks(); renderProjects();
+        logActivity(task.status === 'done' ? 1 : -1, task.completedAt || selectedDay || dateKey(new Date()));
+        renderDayTaskList();
+      }
+      return;
+    }
     if (e.target.matches('[data-task-id]')) {
       const task = state.tasks.find(t => t.id === Number(e.target.dataset.taskId));
       if (task) {
-        task.status = e.target.checked ? 'done' : 'open';
-        if (task.status === 'done') task.inProgress = false;
+        const prevCompletedAt = task.completedAt;
+        const nowChecked = e.target.checked;
+        task.status = nowChecked ? 'done' : 'open';
+        task.completedAt = nowChecked ? dateKey(new Date()) : null;
+        if (nowChecked) task.inProgress = false;
         saveState(); renderTasks();
-        logActivity(task.status === 'done' ? 1 : -1);
+        logActivity(nowChecked ? 1 : -1, nowChecked ? task.completedAt : (prevCompletedAt || dateKey(new Date())));
         if (activeProjectId !== null) renderProjects();
       }
     }
@@ -1017,12 +1114,14 @@
       const task = state.tasks.find(t => t.id === taskId);
       if (!task) return;
       // Xóa task và trừ hoạt động trong ma trận nếu task đã hoàn thành
+      const completedDay = task.completedAt || dateKey(new Date());
       state.tasks = state.tasks.filter(t => t.id !== taskId);
       if (task.status === 'done') {
-        logActivity(-1);
+        logActivity(-1, completedDay);
       }
       saveState();
       renderTasks();
+      renderDayTaskList();
       if (activeProjectId !== null) {
         renderProjects();
       }
@@ -1118,6 +1217,7 @@
         <option value="Đời thường">Đời thường</option>
       </select></div>
       <div class="form-group" id="projSelectGroup" style="display:none;"><label>Thuộc dự án</label><select id="mTaskProject">${projOptions}</select></div>
+      <div class="form-group"><label>Ngày hẹn (để trống nếu không hẹn)</label><input type="date" id="mTaskDue" /></div>
       <div class="form-group"><label>Mô tả / Thời lượng</label><input id="mTaskMeta" value="30 phút" /></div>
     `, () => {
       const title = $('#mTaskTitle').value.trim();
@@ -1125,7 +1225,7 @@
       const projectTitle = tag === 'Project' ? ($('#mTaskProject').value || '') : '';
       const meta = $('#mTaskMeta').value.trim();
       if (!title) { showToast('Vui lòng nhập tiêu đề'); return false; }
-      state.tasks.unshift({ id: Date.now(), title, meta: meta || 'General', tag, projectTitle, status: 'open', inProgress: false });
+      state.tasks.unshift({ id: Date.now(), title, meta: meta || 'General', tag, projectTitle, status: 'open', inProgress: false, dueDate: $('#mTaskDue').value || null, completedAt: null });
       saveState(); renderTasks();
       if (activeProjectId !== null) renderProjects();
       logActivity();
@@ -1249,6 +1349,24 @@
     showToast('Đã lưu');
   });
 
+  // Sao lưu ZIP toàn bộ dữ liệu
+  $('#backupBtn').addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/backup');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'locOS-backup-' + dateKey(new Date()) + '.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast('Đã tải bản sao lưu');
+    } catch (err) { showToast('Không tạo được bản sao lưu'); }
+  });
+
   $('#resetData').addEventListener('click', () => {
     if (confirm('Khôi phục dữ liệu mẫu ban đầu? Dữ liệu hiện tại sẽ mất.')) {
       const keepLog = state.log, keepUi = state.ui;
@@ -1262,21 +1380,73 @@
     }
   });
 
-  renderTasks();
-  renderProjects();
-  renderFinance();
-  renderYears();
+  // Nạp state từ server. Nếu server trống mà localStorage còn dữ liệu cũ → migrate một lần.
+  async function loadState() {
+    let remote = null;
+    try {
+      const res = await fetch('/api/state', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      remote = await res.json();
+    } catch (err) {
+      // Không nối được server (ví dụ mở nhầm file:// hoặc server chưa chạy).
+      showToast('Không kết nối được server — dữ liệu chưa được nạp. Hãy chạy: python3 server.py');
+      return false;
+    }
 
-  applyHeroes();
-  renderHeroSettings();
-  loadHeroes();
+    const hasRemoteData = remote && Object.keys(remote).length > 0;
+    if (hasRemoteData) {
+      state = normalizeState(Object.assign(JSON.parse(JSON.stringify(defaultState)), remote));
+      return true;
+    }
 
-  // Tự cập nhật khi sang ngày mới / năm mới (tạo card năm mới)
+    // Chưa có dữ liệu trên server: thử migrate từ localStorage cũ.
+    const legacy = localStorage.getItem('locOS_state');
+    if (legacy) {
+      try {
+        state = normalizeState(Object.assign(JSON.parse(JSON.stringify(defaultState)), JSON.parse(legacy)));
+        await flushState();                    // ghi lên server trước
+        localStorage.removeItem('locOS_state'); // rồi mới xoá bản cũ
+        showToast('Đã chuyển dữ liệu từ trình duyệt sang file JSON');
+        return true;
+      } catch (err) { /* dữ liệu cũ hỏng: rơi xuống defaultState */ }
+    }
+
+    state = normalizeState(JSON.parse(JSON.stringify(defaultState)));
+    return true;
+  }
+
+  // Đồng bộ các ô nhập phụ thuộc state sau khi đã nạp xong.
+  function applyStateToInputs() {
+    setHeading();
+    $('#settingsName').value = state.user.name;
+    $('#idleHide').value = String(state.ui.idleHide);
+  }
+
+  async function init() {
+    await loadState();
+    applyStateToInputs();
+
+    renderTasks();
+    renderProjects();
+    renderFinance();
+    renderYears();
+
+    applyHeroes();
+    renderHeroSettings();
+    loadHeroes();
+
+    // Tự cập nhật khi sang ngày mới / năm mới (tạo card năm mới)
+    setInterval(() => {
+      const k = dateKey(new Date());
+      if (k !== lastDay) {
+        lastDay = k;
+        selectedDay = null;
+        renderYears(); renderTasks(); renderProjects();
+      }
+    }, 30000);
+  }
   let lastDay = dateKey(new Date());
-  setInterval(() => {
-    const k = dateKey(new Date());
-    if (k !== lastDay) { lastDay = k; renderYears(); }
-  }, 30000);
+  init();
 </script>
 </body>
 </html>

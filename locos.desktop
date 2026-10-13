@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=locOS
+GenericName=Quản lý công việc
+Comment=Quản lý công việc, dự án và tài chính cá nhân
+Exec=python3 /home/felix-nguyen/Project/My-Workspace/server.py
+Path=/home/felix-nguyen/Project/My-Workspace
+Icon=/home/felix-nguyen/Project/My-Workspace/locos.svg
+Terminal=true
+Categories=Office;
+StartupNotify=false

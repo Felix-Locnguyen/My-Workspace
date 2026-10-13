@@ -1,0 +1,6 @@
+# Dữ liệu cá nhân của locOS — không commit lên git
+data/
+
+# Python
+__pycache__/
+*.pyc

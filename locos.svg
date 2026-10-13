@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="26" fill="#0a0a0a"/>
+  <rect x="2" y="2" width="124" height="124" rx="24" fill="none" stroke="#262626" stroke-width="3"/>
+  <!-- khung ma trận ô vuông -->
+  <g fill="#404040">
+    <rect x="24" y="30" width="12" height="12" rx="2"/>
+    <rect x="40" y="30" width="12" height="12" rx="2" fill="#707070"/>
+    <rect x="56" y="30" width="12" height="12" rx="2"/>
+    <rect x="24" y="46" width="12" height="12" rx="2" fill="#a8a8a8"/>
+    <rect x="40" y="46" width="12" height="12" rx="2" fill="#ffffff"/>
+    <rect x="56" y="46" width="12" height="12" rx="2" fill="#707070"/>
+    <rect x="24" y="62" width="12" height="12" rx="2"/>
+    <rect x="40" y="62" width="12" height="12" rx="2" fill="#707070"/>
+    <rect x="56" y="62" width="12" height="12" rx="2"/>
+  </g>
+  <!-- dấu tick -->
+  <path d="M74 62 l10 11 l22 -26" fill="none" stroke="#ffffff" stroke-width="9"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
