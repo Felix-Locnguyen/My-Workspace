@@ -232,7 +232,7 @@
     <!-- Công việc -->
     <section class="view" id="view-tasks">
       <div class="page-head">
-        <div><h1>Công việc</h1><div class="subtitle">Chỉ hiển thị công việc hôm nay — task quá hạn xem qua ma trận.</div></div>
+        <div><h1>Công việc</h1><div class="subtitle">Task quá hạn bị ẩn — bấm ô ngày trong ma trận để xem và xử lý.</div></div>
         <button class="button primary" id="addTaskBtn">+ Thêm công việc</button>
       </div>
       <div class="stats">
@@ -458,11 +458,12 @@
     renderYears();
   }
 
-  // Quy tắc "hôm nay": task không xong → hiện nếu không hẹn ngày hoặc hẹn đúng ngày đó;
-  // task đã xong → chỉ hiện trong ngày được hoàn thành.
+  // Quy tắc hiển thị: task không xong → hiện nếu không hẹn ngày hoặc hẹn từ hôm nay trở đi
+  // (kể cả tương lai); chỉ ẩn khi ĐÃ quá hạn. Task đã xong → chỉ hiện trong ngày hoàn thành.
   function isTaskActiveOn(t, dayKey) {
     if (t.status === 'done') return t.completedAt === dayKey;
-    return !t.dueDate || t.dueDate === dayKey;
+    if (!t.dueDate) return true;
+    return t.dueDate >= dayKey;
   }
   function todayTasks() {
     const key = dateKey(new Date());
@@ -475,6 +476,18 @@
   }
   function isOverdue(t) {
     return t.status !== 'done' && !!t.dueDate && t.dueDate < dateKey(new Date());
+  }
+  // Số ngày còn lại tới hạn: dương = tương lai, 0 = hôm nay, âm = đã quá hạn.
+  function dayDiffFromToday(dueDate) {
+    return -overdueDays(dueDate);
+  }
+  // Nhãn hiển thị hạn cho một task.
+  function dueLabel(t) {
+    if (!t.dueDate) return '';
+    if (isOverdue(t)) return ` · Hạn ${fmtDay(t.dueDate)} · quá hạn ${overdueDays(t.dueDate)} ngày`;
+    const diff = dayDiffFromToday(t.dueDate);
+    if (diff === 0) return ' · Hạn hôm nay';
+    return ` · Hạn ${fmtDay(t.dueDate)} · còn ${diff} ngày`;
   }
 
   // Năm hiện tại: 12 tháng gần nhất (kết thúc hôm nay). Năm cũ: cả năm dương lịch.
@@ -559,16 +572,17 @@
     const el = $('#dayTaskList');
     if (!el) return;
     if (!selectedDay) { el.innerHTML = ''; return; }
+    // Hiện task đã hoàn thành đúng ngày đó, và task hẹn đúng ngày đó (kể cả tương lai).
     const dayTasks = state.tasks.filter(t =>
       (t.status === 'done' && t.completedAt === selectedDay) ||
-      (t.status !== 'done' && isOverdue(t) && t.dueDate === selectedDay)
+      (t.status !== 'done' && t.dueDate === selectedDay)
     );
     const rows = dayTasks.map(t => `
-      <div class="task-row ${t.status === 'done' ? 'done' : 'overdue'}">
+      <div class="task-row ${t.status === 'done' ? 'done' : (isOverdue(t) ? 'overdue' : '')}">
         <input class="check" type="checkbox" data-daytask-id="${t.id}" ${t.status === 'done' ? 'checked' : ''} aria-label="Hoàn thành công việc">
         <div>
           <div class="task-title">${escapeHTML(t.title)}</div>
-          <div class="task-meta">${escapeHTML(t.meta)}${t.projectTitle ? ' · ' + escapeHTML(t.projectTitle) : ''}</div>
+          <div class="task-meta">${escapeHTML(t.meta)}${dueLabel(t)}${t.projectTitle ? ' · ' + escapeHTML(t.projectTitle) : ''}</div>
         </div>
         <span class="tag">${escapeHTML(t.tag)}</span>
         <button class="button ghost" data-edit-task="${t.id}">Sửa</button>
@@ -880,7 +894,7 @@
         <input class="check" type="checkbox" data-task-id="${t.id}" ${t.status === 'done' ? 'checked' : ''} aria-label="Hoàn thành công việc">
         <div>
           <div class="task-title">${escapeHTML(t.title)}</div>
-          <div class="task-meta">${escapeHTML(t.meta)}${t.projectTitle ? ' · ' + escapeHTML(t.projectTitle) : ''}</div>
+          <div class="task-meta">${escapeHTML(t.meta)}${dueLabel(t)}${t.projectTitle ? ' · ' + escapeHTML(t.projectTitle) : ''}</div>
         </div>
         <span class="tag">${escapeHTML(t.tag)}</span>
         <button class="button ghost" data-edit-task="${t.id}">Sửa</button>
@@ -954,7 +968,7 @@
     const renderCard = t => `
       <div class="card${isOverdue(t) ? ' overdue' : ''}" data-edit-task="${t.id}">
         <div style="font-size:13px;">${escapeHTML(t.title)}</div>
-        <div class="task-meta">${escapeHTML(t.meta)}${t.dueDate ? ` · Hạn ${fmtDay(t.dueDate)}${isOverdue(t) ? ' · quá hạn ' + overdueDays(t.dueDate) + ' ngày' : ''}` : ''}</div>
+        <div class="task-meta">${escapeHTML(t.meta)}${dueLabel(t)}</div>
       </div>`;
 
     detailContainer.innerHTML = `
