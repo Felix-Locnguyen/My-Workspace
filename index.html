@@ -98,7 +98,12 @@
   .project-title { font-size: 14px; }
   .project-desc { color: var(--muted); font-size: 12px; margin: 2px 0 8px; }
   .progress { height: 3px; background: var(--line); border-radius: 3px; overflow: hidden; }
-  .progress span { display: block; height: 100%; background: var(--text); }
+  .progress span { display: block; height: 100%; background: var(--text); transition: width .35s ease, background-color .35s ease; }
+  .progress.big { height: 10px; border-radius: 6px; }
+  .progress.big span.ok { background: #2ecc71; }
+  .exp-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .exp-line #minExpRemain { font-weight: 600; }
+  .note.ok { color: #2ecc71; }
 
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
   input, select { color: var(--text); background: #000; border: 1px solid var(--line); border-radius: var(--radius); padding: 9px 10px; outline: none; }
@@ -292,6 +297,23 @@
         <div class="stat"><div class="stat-label">Mục tiêu tài sản</div><div class="stat-value" id="finGoalAssetShow">0</div><div class="stat-foot" id="finGoalAssetComp"></div></div>
       </div>
 
+      <section class="panel" id="minExpensePanel" style="margin-bottom:16px;">
+        <div class="panel-head">
+          <h2>Chi tiêu tối thiểu</h2>
+          <span class="note" id="minExpPct">0%</span>
+        </div>
+        <p class="note" style="margin:-8px 0 14px;">Chi tiêu tối thiểu là chi tiêu phục vụ đời sống bắt buộc và không cắt bỏ được, ví dụ tiền thuê nhà, điện nước, đồ ăn.</p>
+        <div class="exp-line">
+          <span class="muted">Còn lại trong ví tháng này</span>
+          <span id="minExpRemain">0 ₫</span>
+        </div>
+        <div class="progress big"><span id="minExpBar" style="width:0%"></span></div>
+        <div class="exp-line" style="margin:8px 0 0;">
+          <span class="note" id="minExpNote"></span>
+          <span class="note" id="minExpTarget"></span>
+        </div>
+      </section>
+
       <section class="panel" style="margin-bottom:16px;">
         <div class="panel-head"><h2>Giao dịch</h2></div>
         <div class="table-wrap">
@@ -384,7 +406,7 @@
 
   const defaultState = {
     user: { name: "" },
-    goals: { monthlyIncome: 0, assetGoal: 0 },
+    goals: { monthlyIncome: 0, assetGoal: 0, minExpense: 0 },
     tasks: [],
     projects: [],
     transactions: [],
@@ -399,7 +421,8 @@
   // Chuẩn hoá state: điền thiếu các trường và migrate task cũ.
   function normalizeState(s) {
     if (!s.user) s.user = { name: '' };
-    if (!s.goals) s.goals = { monthlyIncome: 10000000, assetGoal: 500000000 };
+    if (!s.goals) s.goals = { monthlyIncome: 10000000, assetGoal: 500000000, minExpense: 0 };
+    s.goals.minExpense = Math.max(0, Number(s.goals.minExpense) || 0); // chi tiêu tối thiểu (không bắt buộc)
     if (!Array.isArray(s.tasks)) s.tasks = [];
     if (!Array.isArray(s.projects)) s.projects = [];
     if (!Array.isArray(s.transactions)) s.transactions = [];
@@ -448,14 +471,24 @@
   function dateKey(d) {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
-  function levelOf(n) { return n >= 6 ? 4 : n >= 4 ? 3 : n >= 2 ? 2 : n >= 1 ? 1 : 0; }
+  function levelOf(n) {
+    // Thang 5 mức: 0–1, 2–3, 4–6, 7–8, 9+ hoạt động hoàn thành trong ngày.
+    return n >= 9 ? 4 : n >= 7 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0;
+  }
+  const LEVEL_LABELS = ['0–1', '2–3', '4–6', '7–8', '9+'];
   function fmtDay(key) { return `${key.slice(8)}/${key.slice(5, 7)}/${key.slice(0, 4)}`; }
 
-  function logActivity(delta = 1, key = dateKey(new Date())) {
-    const n = Math.max(0, (state.log[key] || 0) + delta);
-    if (n === 0) delete state.log[key]; else state.log[key] = n;
-    saveState();
-    renderYears();
+  // Ma trận chỉ tính những việc ĐÃ HOÀN THÀNH trong ngày đó (việc thêm mới chưa
+  // hoàn thành không được tính). Đồng bộ state.log từ danh sách công việc.
+  function syncLog() {
+    const next = {};
+    state.tasks.forEach(t => {
+      if (t.status === 'done' && t.completedAt) next[t.completedAt] = (next[t.completedAt] || 0) + 1;
+    });
+    const changed = Object.keys(next).length !== Object.keys(state.log).length ||
+      Object.keys(next).some(k => state.log[k] !== next[k]);
+    state.log = next;
+    if (changed) saveState();
   }
 
   // Quy tắc hiển thị: task không xong → hiện nếu không hẹn ngày hoặc hẹn từ hôm nay trở đi
@@ -502,6 +535,7 @@
   }
 
   function renderYears() {
+    syncLog();
     const now = new Date();
     const thisYear = now.getFullYear();
     const todayKey = dateKey(now);
@@ -525,15 +559,15 @@
       const row = (i + offset) % 7 + 1;
       if (d.getDate() === 1) months += `<span style="grid-column:${col}">${MONTHS[d.getMonth()]}</span>`;
       const cls = 'cell l' + levelOf(n) + (key > todayKey ? ' future' : '') + (key === todayKey ? ' today' : '') + (key === selectedDay ? ' sel' : '');
-      const label = `${fmtDay(key)}: ${n} hoạt động`;
+      const label = `${fmtDay(key)}: ${n} hoạt động hoàn thành`;
       cells += `<button class="${cls}" style="grid-column:${col};grid-row:${row}" data-day="${key}" title="${label}" aria-label="${label}"></button>`;
     }
 
     const title = rolling ? `${total} hoạt động trong năm qua` : `${total} hoạt động trong năm ${y}`;
     const info = selectedDay
-      ? `<span class="note">${fmtDay(selectedDay)} · ${state.log[selectedDay] || 0} hoạt động</span>
-         <span><button class="button ghost" data-log="1">+1</button><button class="button ghost" data-log="-1">−1</button></span>`
-      : `<span class="note">Chọn một ô để xem ngày</span>`;
+      ? `<span class="note">${fmtDay(selectedDay)} · ${state.log[selectedDay] || 0} hoạt động hoàn thành</span>`
+      : `<span class="note">Chọn một ô để xem ngày — bấm lại ô đó để thu lại</span>`;
+    const legendCells = LEVEL_LABELS.map((l, i) => `<i class="cell${i ? ' l' + i : ''}" title="${l} hoạt động"></i>`).join('');
     const yearBtns = years.map(yy => `<button class="year-btn${yy === y ? ' active' : ''}" data-year="${yy}">${yy}</button>`).join('');
 
     const prev = $('.matrix-scroll');
@@ -554,7 +588,10 @@
           </div>
           <div class="matrix-bottom">
             <div style="display:flex;align-items:center;gap:8px;">${info}</div>
-            <div class="legend">Ít <i class="cell"></i><i class="cell l1"></i><i class="cell l2"></i><i class="cell l3"></i><i class="cell l4"></i> Nhiều</div>
+            <div style="text-align:right">
+              <div class="legend">Ít ${legendCells} Nhiều</div>
+              <div class="note">Chỉ tính việc hoàn thành trong ngày · mức ${LEVEL_LABELS.join(' · ')}</div>
+            </div>
           </div>
           <div id="dayTaskList"></div>
         </section>
@@ -591,6 +628,7 @@
     el.innerHTML = `
       <div class="day-list-head">
         <h2>Công việc ngày ${fmtDay(selectedDay)}</h2>
+        <button class="button ghost" data-collapse-day="1">Thu lại ▲</button>
       </div>
       ${rows || '<div class="empty-note">Không có công việc nào trong ngày này.</div>'}`;
   }
@@ -756,8 +794,6 @@
     `, () => {
       const title = $('#eTaskTitle').value.trim();
       if (!title) { showToast('Vui lòng nhập tiêu đề'); return false; }
-      const wasDone = t.status === 'done';
-      const prevCompletedAt = t.completedAt;
       t.title = title;
       t.meta = $('#eTaskMeta').value.trim();
       t.dueDate = $('#eTaskDue').value || null;
@@ -768,9 +804,7 @@
       t.inProgress = st === 'doing';
       if (t.status === 'done') { if (!t.completedAt) t.completedAt = dateKey(new Date()); }
       else t.completedAt = null;
-      saveState(); renderTasks(); renderProjects(); renderDayTaskList();
-      if (!wasDone && t.status === 'done') logActivity(1);
-      else if (wasDone && t.status !== 'done') logActivity(-1, prevCompletedAt || dateKey(new Date()));
+      saveState(); renderTasks(); renderProjects(); renderYears();
       showToast('Đã cập nhật công việc');
       return true;
     });
@@ -1009,7 +1043,7 @@
           completedAt: statChoice === 'done' ? dateKey(new Date()) : null
         });
         saveState(); renderTasks(); renderProjects();
-        logActivity();
+        renderYears(); // nếu task được tạo ở trạng thái "Hoàn thành" thì mới tính vào ma trận
         showToast('Đã thêm task');
         return true;
       });
@@ -1049,11 +1083,12 @@
     const goalIncome = state.goals.monthlyIncome;
     const goalAsset = state.goals.assetGoal;
 
-    $('#finIncome').textContent = (income / 1000000).toFixed(2) + 'M';
-    $('#statGoalIncome').textContent = (goalIncome / 1000000).toFixed(2) + 'M ₫';
-    $('#finExpense').textContent = (expense / 1000000).toFixed(2) + 'M';
+    // Tiền hiển thị dạng đầy đủ (8.000.000 ₫) thay vì rút gọn kiểu 8M
+    $('#finIncome').textContent = fmt(income);
+    $('#statGoalIncome').textContent = fmt(goalIncome);
+    $('#finExpense').textContent = fmt(expense);
     $('#finTotalAsset').textContent = fmt(totalAsset);
-    $('#finGoalAssetShow').textContent = (goalAsset / 1000000).toFixed(1) + 'M ₫';
+    $('#finGoalAssetShow').textContent = fmt(goalAsset);
     const rate = goalAsset > 0 ? Math.min(100, Math.round((totalAsset / goalAsset) * 100)) : 0;
     $('#finGoalAssetComp').textContent = `Đạt ${rate}%`;
 
@@ -1063,6 +1098,29 @@
     $('#dashIncome').textContent = fmt(income);
     $('#dashExpense').textContent = fmt(expense);
     $('#dashExpenseBar').style.width = (income > 0 ? Math.min(100, Math.round(expense / income * 100)) : 0) + '%';
+
+    // Card so sánh số tiền còn lại trong ví tháng này với mức chi tiêu tối thiểu
+    // (mục nhập không bắt buộc — để trống ẩn card). Tối đa 100%, đạt 100% thì thanh xanh.
+    const minExp = Number(state.goals.minExpense) || 0;
+    const panel = $('#minExpensePanel');
+    if (minExp > 0) {
+      const pct = Math.max(0, Math.min(100, Math.round(net / minExp * 100)));
+      const reached = net >= minExp;
+      panel.style.display = '';
+      $('#minExpRemain').textContent = fmt(net);
+      $('#minExpPct').textContent = pct + '%';
+      $('#minExpTarget').textContent = 'Mức tối thiểu: ' + fmt(minExp);
+      const bar = $('#minExpBar');
+      bar.style.width = pct + '%';
+      bar.classList.toggle('ok', reached);
+      const note = $('#minExpNote');
+      note.textContent = reached
+        ? '✓ Đạt 100% — số tiền còn lại đủ cho chi tiêu tối thiểu của tháng.'
+        : 'Còn thiếu ' + fmt(minExp - net) + ' nữa mới đạt mức tối thiểu.';
+      note.classList.toggle('ok', reached);
+    } else {
+      panel.style.display = 'none';
+    }
   }
 
   // Sự kiện chung
@@ -1074,21 +1132,19 @@
         if (task.status === 'done') { task.completedAt = selectedDay || dateKey(new Date()); task.inProgress = false; }
         else task.completedAt = null;
         saveState(); renderTasks(); renderProjects();
-        logActivity(task.status === 'done' ? 1 : -1, task.completedAt || selectedDay || dateKey(new Date()));
-        renderDayTaskList();
+        renderYears(); // ma trận chỉ đếm việc hoàn thành → vẽ lại từ tasks
       }
       return;
     }
     if (e.target.matches('[data-task-id]')) {
       const task = state.tasks.find(t => t.id === Number(e.target.dataset.taskId));
       if (task) {
-        const prevCompletedAt = task.completedAt;
         const nowChecked = e.target.checked;
         task.status = nowChecked ? 'done' : 'open';
         task.completedAt = nowChecked ? dateKey(new Date()) : null;
         if (nowChecked) task.inProgress = false;
         saveState(); renderTasks();
-        logActivity(nowChecked ? 1 : -1, nowChecked ? task.completedAt : (prevCompletedAt || dateKey(new Date())));
+        renderYears(); // ma trận chỉ đếm việc hoàn thành → vẽ lại từ tasks
         if (activeProjectId !== null) renderProjects();
       }
     }
@@ -1118,24 +1174,25 @@
       renderYears();
       return;
     }
+    const collapseDay = e.target.closest('[data-collapse-day]');
+    if (collapseDay) { selectedDay = null; renderYears(); return; }
     const dayCell = e.target.closest('[data-day]');
-    if (dayCell) { selectedDay = dayCell.dataset.day; renderYears(); return; }
-    const logBtn = e.target.closest('[data-log]');
-    if (logBtn && selectedDay) { logActivity(Number(logBtn.dataset.log), selectedDay); return; }
+    if (dayCell) {
+      const key = dayCell.dataset.day;
+      selectedDay = selectedDay === key ? null : key; // bấm lại ô đang mở để thu danh sách
+      renderYears();
+      return;
+    }
     const delTask = e.target.closest('[data-delete-task]');
     if (delTask) {
       const taskId = Number(delTask.dataset.deleteTask);
       const task = state.tasks.find(t => t.id === taskId);
       if (!task) return;
-      // Xóa task và trừ hoạt động trong ma trận nếu task đã hoàn thành
-      const completedDay = task.completedAt || dateKey(new Date());
+      // Xóa task: ma trận tự đếm lại từ danh sách công việc còn lại
       state.tasks = state.tasks.filter(t => t.id !== taskId);
-      if (task.status === 'done') {
-        logActivity(-1, completedDay);
-      }
       saveState();
       renderTasks();
-      renderDayTaskList();
+      renderYears();
       if (activeProjectId !== null) {
         renderProjects();
       }
@@ -1242,7 +1299,6 @@
       state.tasks.unshift({ id: Date.now(), title, meta: meta || 'General', tag, projectTitle, status: 'open', inProgress: false, dueDate: $('#mTaskDue').value || null, completedAt: null });
       saveState(); renderTasks();
       if (activeProjectId !== null) renderProjects();
-      logActivity();
       showToast('Đã thêm công việc');
       return true;
     });
@@ -1267,7 +1323,6 @@
       if (state.projects.some(p => p.title.toLowerCase() === title.toLowerCase())) { showToast('Tên dự án đã tồn tại'); return false; }
       state.projects.push({ id: Date.now(), title, desc: desc || 'Development', progress: Math.min(100, Math.max(0, progress)) });
       saveState(); renderProjects();
-      logActivity();
       showToast('Đã tạo dự án');
       return true;
     });
@@ -1278,14 +1333,21 @@
     openModal('Mục tiêu tài chính', `
       <div class="form-group"><label>Thu nhập tháng (VND)</label><input id="mGoalIncome" type="number" value="${state.goals.monthlyIncome}" /></div>
       <div class="form-group"><label>Tổng tài sản (VND)</label><input id="mGoalAsset" type="number" value="${state.goals.assetGoal}" /></div>
+      <div class="form-group">
+        <label>Chi tiêu tối thiểu (VND) — không bắt buộc</label>
+        <input id="mGoalMinExp" type="number" min="0" placeholder="Để trống nếu không dùng" value="${Number(state.goals.minExpense) || ''}" />
+        <div class="note" style="margin-top:6px;line-height:1.45">Chi tiêu tối thiểu là chi tiêu phục vụ đời sống bắt buộc và không cắt bỏ được, ví dụ tiền thuê nhà, điện nước, đồ ăn. Nhập chỉ số này, mục Tài chính sẽ hiện thanh so sánh số tiền còn lại trong ví tháng này với mức đó (tối đa 100%, đạt 100% thì thanh chuyển màu xanh lá).</div>
+      </div>
     `, () => {
       const inc = Number($('#mGoalIncome').value);
       const ast = Number($('#mGoalAsset').value);
+      const minExp = Math.max(0, Number($('#mGoalMinExp').value) || 0);
       if (isNaN(inc) || isNaN(ast)) { showToast('Vui lòng nhập số hợp lệ'); return false; }
       state.goals.monthlyIncome = inc;
       state.goals.assetGoal = ast;
+      state.goals.minExpense = minExp;
       saveState(); renderFinance();
-      showToast('Đã cập nhật mục tiêu');
+      showToast(minExp > 0 ? 'Đã cập nhật mục tiêu' : 'Đã cập nhật mục tiêu · chưa đặt chi tiêu tối thiểu');
       return true;
     });
   });
@@ -1323,7 +1385,6 @@
         state.assets.push({ id: Date.now(), name, type, costPrice, currentPrice, passiveIncome });
       }
       saveState(); renderFinance();
-      logActivity();
       showToast('Đã lưu tài sản');
       return true;
     });
@@ -1347,7 +1408,6 @@
       const date = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
       state.transactions.unshift({ id: Date.now(), date, name, category, type, amount });
       saveState(); renderFinance();
-      logActivity();
       showToast('Đã thêm giao dịch');
       return true;
     });
@@ -1389,7 +1449,7 @@
       state.ui = keepUi;
       saveState(); setHeading();
       $('#settingsName').value = state.user.name;
-      renderTasks(); renderProjects(); renderFinance();
+      renderTasks(); renderProjects(); renderFinance(); renderYears();
       showToast('Đã khôi phục dữ liệu mẫu');
     }
   });
