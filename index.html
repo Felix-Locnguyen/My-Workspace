@@ -105,6 +105,38 @@
   .exp-line #minExpRemain { font-weight: 600; }
   .note.ok { color: #2ecc71; }
 
+  /* Thời gian tập trung (biểu đồ + bộ đếm giờ) */
+  .range-tabs { display: flex; gap: 4px; }
+  .range-tabs .year-btn { padding: 4px 10px; font-size: 12px; }
+  .focus-summary { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  .focus-summary b { color: var(--text); font-weight: 600; }
+  .chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; }
+  .chart .bar { flex: 1 1 0; min-width: 0; min-height: 2px; background: #242424; border-radius: 2px; transition: height .3s ease, background-color .2s ease; }
+  .chart .bar.has { background: #6f6f6f; }
+  .chart .bar.today { background: var(--text); }
+  .chart .bar.has:hover { background: #b5b5b5; }
+  .chart-labels { display: flex; gap: 3px; margin-top: 6px; color: var(--muted); font-size: 10px; }
+  .chart-labels span { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .focus-list { margin-top: 16px; }
+  .focus-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12px; }
+  .focus-row:first-child { border-top: 0; padding-top: 0; }
+  .focus-row .focus-when { color: var(--muted); white-space: nowrap; }
+  .focus-row .focus-dur { font-weight: 600; white-space: nowrap; }
+  .focus-row .spacer { flex: 1; }
+
+  .seg { display: flex; gap: 4px; border: 1px solid var(--line); border-radius: var(--radius); padding: 3px; margin-bottom: 14px; }
+  .seg button { flex: 1; background: transparent; border: 0; color: var(--muted); padding: 7px 8px; border-radius: 4px; }
+  .seg button:hover { color: var(--text); }
+  .seg button.active { background: #1a1a1a; color: var(--text); font-weight: 600; }
+  .seg button:disabled { opacity: .35; cursor: default; }
+  .timer-display { font-size: 46px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin: 4px 0 10px; }
+  .timer-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .timer-presets .button { flex: 1; min-width: 46px; padding: 6px 8px; }
+  .timer-presets .button.active { background: var(--text); color: #000; border-color: var(--text); font-weight: 600; }
+  .timer-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .timer-actions .button { flex: 1; }
+  @media (max-width: 800px) { .timer-display { font-size: 38px; } }
+
   .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
   input, select { color: var(--text); background: #000; border: 1px solid var(--line); border-radius: var(--radius); padding: 9px 10px; outline: none; }
   input:focus, select:focus { border-color: #777; }
@@ -210,6 +242,50 @@
         <div class="stat"><div class="stat-label">Dự án</div><div class="stat-value" id="dashProjectCount">0</div></div>
         <div class="stat"><div class="stat-label">Dòng tiền ròng</div><div class="stat-value" id="dashNetCash">0 ₫</div></div>
         <div class="stat"><div class="stat-label">Tổng tài sản</div><div class="stat-value" id="dashAssets">0 ₫</div></div>
+      </div>
+
+      <!-- Thời gian tập trung: biểu đồ (trái) + bộ đếm giờ (phải) — nằm trên ma trận -->
+      <div class="grid-2" style="margin-bottom:16px;">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Thời gian tập trung</h2>
+            <span class="range-tabs">
+              <button class="year-btn active" data-focus-range="week">Tuần</button>
+              <button class="year-btn" data-focus-range="month">Tháng</button>
+              <button class="year-btn" data-focus-range="year">Năm</button>
+            </span>
+          </div>
+          <div class="focus-summary" id="focusSummary"></div>
+          <div class="chart" id="focusChart"></div>
+          <div class="chart-labels" id="focusChartLabels"></div>
+          <div id="focusRecent"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>Bộ đếm giờ</h2><span class="note" id="timerState">Sẵn sàng</span></div>
+          <div class="seg" id="timerModes">
+            <button class="active" data-focus-mode="timer">Hẹn giờ</button>
+            <button data-focus-mode="stopwatch">Bấm giờ</button>
+          </div>
+          <div class="timer-display" id="timerDisplay">25:00</div>
+          <div class="progress big" id="timerProgress"><span id="timerBar" style="width:100%"></span></div>
+          <div class="timer-presets" id="timerPresets">
+            <button class="button" data-preset="15">15'</button>
+            <button class="button" data-preset="25">25'</button>
+            <button class="button" data-preset="45">45'</button>
+            <button class="button" data-preset="60">60'</button>
+          </div>
+          <div class="form-group" id="timerCustomGroup">
+            <label for="timerMinutes">Số phút tùy chỉnh (1–240)</label>
+            <input type="number" id="timerMinutes" min="1" max="240" value="25" />
+          </div>
+          <div class="timer-actions">
+            <button class="button primary" id="timerToggle">Bắt đầu</button>
+            <button class="button" id="timerReset">Đặt lại</button>
+            <button class="button" id="timerFinish">Kết thúc</button>
+          </div>
+          <p class="note" style="margin-top:12px;line-height:1.45">Chỉ <b>hết giờ</b> hoặc bấm <b>Kết thúc</b> mới ghi nhận vào dữ liệu (tối thiểu 1 phút). <b>Tạm dừng / Đặt lại</b> không tính.</p>
+        </section>
       </div>
 
       <div id="yearCards" class="year-cards"></div>
@@ -357,7 +433,7 @@
 
       <section class="panel" style="max-width:480px;margin-top:16px;">
         <div class="panel-head"><h2>Sao lưu</h2></div>
-        <p class="note" style="margin-bottom:12px">Tải toàn bộ dữ liệu (6 file JSON) về máy dưới dạng một file ZIP.</p>
+        <p class="note" style="margin-bottom:12px">Tải toàn bộ dữ liệu (7 file JSON) về máy dưới dạng một file ZIP.</p>
         <button class="button" id="backupBtn">Tải bản sao lưu ZIP</button>
       </section>
 
@@ -412,6 +488,8 @@
     transactions: [],
     assets: [],
     log: {},
+    focus: [],
+    focusActive: null,
     ui: { idleHide: 60 }
   };
 
@@ -427,6 +505,16 @@
     if (!Array.isArray(s.projects)) s.projects = [];
     if (!Array.isArray(s.transactions)) s.transactions = [];
     if (!Array.isArray(s.assets)) s.assets = [];
+    if (!Array.isArray(s.focus)) s.focus = [];
+    if (s.focusActive === undefined) s.focusActive = null;
+    if (s.focusActive) {
+      // Phiên đang chạy bị hỏng dữ liệu → bỏ, không giữ nửa chừng
+      const fa = s.focusActive;
+      if (!fa.mode || !Number.isFinite(Number(fa.durationSec)) || !Number.isFinite(Number(fa.accumulatedSec))) s.focusActive = null;
+      else { fa.durationSec = Number(fa.durationSec); fa.accumulatedSec = Number(fa.accumulatedSec); }
+    }
+    s.focus = s.focus.filter(f => f && Number.isFinite(Number(f.durationSec)) && f.date)
+      .map(f => ({ id: f.id || Date.now(), mode: f.mode === 'stopwatch' ? 'stopwatch' : 'timer', durationSec: Math.round(Number(f.durationSec)), startedAt: f.startedAt || '', endedAt: f.endedAt || '', status: f.status || 'kết thúc', date: f.date }));
     if (!s.log || typeof s.log !== 'object') s.log = {};
     if (!s.ui) s.ui = { idleHide: 60 };
     s.transactions.forEach((t, i) => { if (!t.id) t.id = Date.now() + i; });
@@ -477,13 +565,24 @@
   }
   const LEVEL_LABELS = ['0–1', '2–3', '4–6', '7–8', '9+'];
   function fmtDay(key) { return `${key.slice(8)}/${key.slice(5, 7)}/${key.slice(0, 4)}`; }
+  // Số phút → "3 giờ 20 phút" / "50 phút"
+  function fmtMin(min) {
+    const m = Math.round(Number(min) || 0);
+    if (m < 60) return m + ' phút';
+    const h = Math.floor(m / 60), r = m % 60;
+    return r ? `${h} giờ ${r} phút` : `${h} giờ`;
+  }
 
-  // Ma trận chỉ tính những việc ĐÃ HOÀN THÀNH trong ngày đó (việc thêm mới chưa
-  // hoàn thành không được tính). Đồng bộ state.log từ danh sách công việc.
+  // Ma trận chỉ tính những việc ĐÃ HOÀN THÀNH trong ngày đó và các phiên tập trung
+  // đã kết thúc (việc thêm mới chưa hoàn thành không được tính).
+  // Đồng bộ state.log từ danh sách công việc + phiên tập trung.
   function syncLog() {
     const next = {};
     state.tasks.forEach(t => {
       if (t.status === 'done' && t.completedAt) next[t.completedAt] = (next[t.completedAt] || 0) + 1;
+    });
+    state.focus.forEach(f => {
+      if (f.date) next[f.date] = (next[f.date] || 0) + 1;
     });
     const changed = Object.keys(next).length !== Object.keys(state.log).length ||
       Object.keys(next).some(k => state.log[k] !== next[k]);
@@ -549,6 +648,9 @@
     const offset = start.getDay(); // Chủ nhật = hàng 1
 
     let cells = '', months = '', total = 0;
+    // Số phút tập trung theo ngày (tooltip ô và dòng thông tin ngày được chọn)
+    const focusMinByDay = {};
+    state.focus.forEach(f => { if (f.date) focusMinByDay[f.date] = (focusMinByDay[f.date] || 0) + f.durationSec / 60; });
     for (let i = 0; ; i++) {
       const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
       if (d > end) break;
@@ -559,13 +661,14 @@
       const row = (i + offset) % 7 + 1;
       if (d.getDate() === 1) months += `<span style="grid-column:${col}">${MONTHS[d.getMonth()]}</span>`;
       const cls = 'cell l' + levelOf(n) + (key > todayKey ? ' future' : '') + (key === todayKey ? ' today' : '') + (key === selectedDay ? ' sel' : '');
-      const label = `${fmtDay(key)}: ${n} hoạt động hoàn thành`;
+      const fm = focusMinByDay[key] ? ` · ${fmtMin(focusMinByDay[key])} tập trung` : '';
+      const label = `${fmtDay(key)}: ${n} hoạt động hoàn thành${fm}`;
       cells += `<button class="${cls}" style="grid-column:${col};grid-row:${row}" data-day="${key}" title="${label}" aria-label="${label}"></button>`;
     }
 
     const title = rolling ? `${total} hoạt động trong năm qua` : `${total} hoạt động trong năm ${y}`;
     const info = selectedDay
-      ? `<span class="note">${fmtDay(selectedDay)} · ${state.log[selectedDay] || 0} hoạt động hoàn thành</span>`
+      ? `<span class="note">${fmtDay(selectedDay)} · ${state.log[selectedDay] || 0} hoạt động hoàn thành${focusMinByDay[selectedDay] ? ' · ' + fmtMin(focusMinByDay[selectedDay]) + ' tập trung' : ''}</span>`
       : `<span class="note">Chọn một ô để xem ngày — bấm lại ô đó để thu lại</span>`;
     const legendCells = LEVEL_LABELS.map((l, i) => `<i class="cell${i ? ' l' + i : ''}" title="${l} hoạt động"></i>`).join('');
     const yearBtns = years.map(yy => `<button class="year-btn${yy === y ? ' active' : ''}" data-year="${yy}">${yy}</button>`).join('');
@@ -590,7 +693,6 @@
             <div style="display:flex;align-items:center;gap:8px;">${info}</div>
             <div style="text-align:right">
               <div class="legend">Ít ${legendCells} Nhiều</div>
-              <div class="note">Chỉ tính việc hoàn thành trong ngày · mức ${LEVEL_LABELS.join(' · ')}</div>
             </div>
           </div>
           <div id="dayTaskList"></div>
@@ -625,12 +727,26 @@
         <button class="button ghost" data-edit-task="${t.id}">Sửa</button>
         <button class="button ghost" data-delete-task="${t.id}" aria-label="Xóa">✕</button>
       </div>`).join('');
+
+    // Phiên tập trung đã ghi nhận trong ngày
+    const dayFocus = state.focus.filter(f => f.date === selectedDay);
+    const focusRows = dayFocus.map(f => `
+      <div class="focus-row">
+        <span class="focus-when">${focusTimeLabel(f)}</span>
+        <span class="focus-dur">${fmtMin(f.durationSec / 60)}</span>
+        <span class="tag">${f.mode === 'stopwatch' ? 'Bấm giờ' : 'Hẹn giờ'} · ${escapeHTML(f.status)}</span>
+        <span class="spacer"></span>
+        <button class="button ghost" data-del-focus="${f.id}" aria-label="Xóa phiên tập trung">✕</button>
+      </div>`).join('');
+
     el.innerHTML = `
       <div class="day-list-head">
         <h2>Công việc ngày ${fmtDay(selectedDay)}</h2>
         <button class="button ghost" data-collapse-day="1">Thu lại ▲</button>
       </div>
-      ${rows || '<div class="empty-note">Không có công việc nào trong ngày này.</div>'}`;
+      ${rows || '<div class="empty-note">Không có công việc nào trong ngày này.</div>'}
+      <div class="day-list-head"><h2>Phiên tập trung</h2><span class="tag">${dayFocus.length}</span></div>
+      <div class="focus-list">${focusRows || '<div class="empty-note">Không có phiên tập trung nào trong ngày này.</div>'}</div>`;
   }
 
   function setHeading() {
@@ -1050,6 +1166,220 @@
     });
   }
 
+  // ── Thời gian tập trung: bộ đếm giờ (hẹn giờ / bấm giờ) + biểu đồ ──────────
+  const FOCUS_MIN_SEC = 60;   // phiên ngắn hơn 1 phút không ghi nhận (chống bấm nhầm)
+  const FOCUS_MAX_MIN = 240;
+  let focusRange = 'week';    // week | month | year
+  let timerMode = 'timer';    // timer (hẹn giờ) | stopwatch (bấm giờ)
+
+  function focusElapsed() {
+    const fa = state.focusActive;
+    if (!fa) return 0;
+    const running = fa.startTs ? Math.floor((Date.now() - fa.startTs) / 1000) : 0;
+    return Math.max(0, (fa.accumulatedSec || 0) + running);
+  }
+  function focusRunning() { return !!(state.focusActive && !state.focusActive.paused); }
+  function pendingDurationSec() {
+    const mins = Math.min(FOCUS_MAX_MIN, Math.max(1, Math.round(Number($('#timerMinutes').value) || 25)));
+    return mins * 60;
+  }
+  function clockOf(iso) {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  }
+  function focusTimeLabel(f) {
+    const a = clockOf(f.startedAt), b = clockOf(f.endedAt);
+    return a && b ? `${a}–${b}` : (b || a || '');
+  }
+  function fmtClock(sec) {
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+    const mm = String(m).padStart(2, '0'), ss = String(s).padStart(2, '0');
+    return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  }
+
+  // Ghi nhận một phiên tập trung — CHỈ gọi khi hết hẹn giờ hoặc người dùng bấm "Kết thúc".
+  function recordFocus(sec, status) {
+    const ended = new Date();
+    const started = new Date(ended.getTime() - sec * 1000);
+    state.focus.unshift({
+      id: Date.now(), mode: state.focusActive ? state.focusActive.mode : timerMode,
+      durationSec: Math.round(sec),
+      startedAt: started.toISOString(), endedAt: ended.toISOString(),
+      status, date: dateKey(ended)
+    });
+    state.focusActive = null;
+    saveState();
+    renderFocus(); renderYears();
+    showToast(`Đã ghi nhận ${fmtMin(sec / 60)} tập trung · ${status}`);
+  }
+
+  function renderFocus() { renderTimer(); renderFocusChart(); }
+
+  function renderTimer() {
+    const fa = state.focusActive;
+    const mode = fa ? fa.mode : timerMode;
+    const isTimer = mode === 'timer';
+    const running = focusRunning();
+    const elapsed = fa ? focusElapsed() : 0;
+    const durationSec = isTimer ? (fa ? fa.durationSec : pendingDurationSec()) : 0;
+
+    $$('#timerModes button').forEach(b => {
+      b.classList.toggle('active', b.dataset.focusMode === mode);
+      b.disabled = running || elapsed > 0; // đang có phiên → không đổi chế độ
+    });
+
+    $('#timerDisplay').textContent = fmtClock(isTimer ? durationSec - elapsed : elapsed);
+    $('#timerProgress').style.display = isTimer ? '' : 'none';
+    $('#timerBar').style.width = (isTimer && durationSec > 0 ? Math.max(0, Math.min(100, (1 - elapsed / durationSec) * 100)) : 100) + '%';
+
+    $('#timerPresets').style.display = isTimer ? '' : 'none';
+    $('#timerCustomGroup').style.display = isTimer ? '' : 'none';
+    $$('#timerPresets .button').forEach(b => b.classList.toggle('active', !fa && Number(b.dataset.preset) * 60 === durationSec));
+    $('#timerMinutes').disabled = running || elapsed > 0;
+
+    $('#timerToggle').textContent = running ? 'Tạm dừng' : (fa ? 'Tiếp tục' : 'Bắt đầu');
+    $('#timerFinish').disabled = !fa;   // luôn bấm được khi có phiên — phần ghi nhận tự lọc phiên < 1 phút
+    $('#timerState').textContent = running ? 'Đang chạy' : (fa ? 'Đã tạm dừng' : 'Sẵn sàng');
+  }
+
+  // Đồng hồ chạy theo timestamp (không đếm tick) → refresh/ẩn tab không sai lệch.
+  function timerTick() {
+    const fa = state.focusActive;
+    if (!fa) return;
+    const elapsed = focusElapsed();
+    if (fa.mode === 'timer' && elapsed >= fa.durationSec) { recordFocus(fa.durationSec, 'đủ giờ'); return; } // hết hẹn giờ
+    renderTimer();
+  }
+
+  $$('#timerModes button').forEach(b => b.addEventListener('click', () => {
+    if (state.focusActive && focusElapsed() > 0) { showToast('Đang có phiên chưa ghi nhận — bấm Kết thúc hoặc Đặt lại trước'); return; }
+    timerMode = b.dataset.focusMode;
+    renderTimer();
+  }));
+  $$('#timerPresets .button').forEach(b => b.addEventListener('click', () => {
+    if (state.focusActive && focusElapsed() > 0) return;
+    $('#timerMinutes').value = b.dataset.preset;
+    renderTimer();
+  }));
+  $('#timerMinutes').addEventListener('input', renderTimer);
+
+  $('#timerToggle').addEventListener('click', () => {
+    const fa = state.focusActive;
+    if (fa && !fa.paused) {          // đang chạy → tạm dừng (không ghi nhận)
+      fa.accumulatedSec = focusElapsed();
+      fa.startTs = null;
+      fa.paused = true;
+    } else if (fa) {                // tạm dừng → chạy tiếp
+      fa.startTs = Date.now();
+      fa.paused = false;
+    } else {                        // bắt đầu phiên mới
+      state.focusActive = {
+        mode: timerMode,
+        durationSec: timerMode === 'timer' ? pendingDurationSec() : 0,
+        accumulatedSec: 0,
+        startTs: Date.now(),
+        paused: false
+      };
+    }
+    saveState(); renderTimer();
+  });
+
+  $('#timerReset').addEventListener('click', () => {  // bỏ phiên hiện tại — KHÔNG ghi nhận
+    if (!state.focusActive) return;
+    state.focusActive = null;
+    saveState(); renderTimer();
+    showToast('Đã đặt lại — phiên này không được ghi nhận');
+  });
+
+  $('#timerFinish').addEventListener('click', () => {
+    const fa = state.focusActive;
+    if (!fa) return;
+    const sec = focusElapsed();
+    if (sec < FOCUS_MIN_SEC) { showToast('Phiên quá ngắn (tối thiểu 1 phút) — không ghi nhận'); return; }
+    recordFocus(sec, (fa.mode === 'timer' && sec >= fa.durationSec) ? 'đủ giờ' : 'kết thúc');
+  });
+
+  // Biểu đồ thời gian tập trung theo Tuần / Tháng / Năm (cột CSS, không cần thư viện)
+  function focusByDate() {
+    const map = {};
+    state.focus.forEach(f => {
+      if (!f.date) return;
+      if (!map[f.date]) map[f.date] = { min: 0, count: 0 };
+      map[f.date].min += f.durationSec / 60;
+      map[f.date].count++;
+    });
+    return map;
+  }
+
+  function focusBuckets(range) {
+    const now = new Date();
+    const map = focusByDate();
+    const todayKey = dateKey(now);
+    const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    if (range === 'year') {
+      const out = MONTHS.map(label => ({ label, min: 0, count: 0, today: false, title: '' }));
+      Object.keys(map).forEach(key => {
+        if (key.slice(0, 4) !== String(now.getFullYear())) return;
+        const b = out[Number(key.slice(5, 7)) - 1];
+        if (!b) return;
+        b.min += map[key].min; b.count += map[key].count;
+      });
+      out.forEach(b => { b.title = `${b.label} · ${fmtMin(b.min)} · ${b.count} phiên`; });
+      return out;
+    }
+    const days = [];
+    if (range === 'week') {
+      for (let i = 6; i >= 0; i--) days.push(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i));
+    } else {
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      for (let dd = 1; dd <= lastDay; dd++) days.push(new Date(now.getFullYear(), now.getMonth(), dd));
+    }
+    const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return days.map(d => {
+      const key = dateKey(d);
+      const info = map[key] || { min: 0, count: 0 };
+      const label = range === 'week' ? WD[d.getDay()]
+        : (d.getDate() === 1 || d.getDate() % 5 === 0 || d.getDate() === lastOfMonth) ? String(d.getDate()) : '';
+      return { label, min: info.min, count: info.count, today: key === todayKey, title: `${fmtDay(key)} · ${fmtMin(info.min)} · ${info.count} phiên` };
+    });
+  }
+
+  function focusRangeFilter(range) {
+    const now = new Date();
+    if (range === 'year') { const y = String(now.getFullYear()); return key => !!key && key.slice(0, 4) === y; }
+    if (range === 'week') { const from = dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)); const to = dateKey(now); return key => !!key && key >= from && key <= to; }
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return key => !!key && key.slice(0, 7) === ym;
+  }
+
+  function renderFocusChart() {
+    const buckets = focusBuckets(focusRange);
+    const max = Math.max(1, ...buckets.map(b => b.min));
+    $('#focusChart').innerHTML = buckets.map(b =>
+      `<div class="bar${b.min > 0 ? ' has' : ''}${b.today ? ' today' : ''}" style="height:${b.min > 0 ? Math.max(4, (b.min / max) * 100) : 0}%" title="${escapeHTML(b.title)}"></div>`).join('');
+    $('#focusChartLabels').innerHTML = buckets.map(b => `<span>${b.label}</span>`).join('');
+    $$('.range-tabs .year-btn').forEach(b => b.classList.toggle('active', b.dataset.focusRange === focusRange));
+
+    const totalMin = buckets.reduce((s, b) => s + b.min, 0);
+    const totalCount = buckets.reduce((s, b) => s + b.count, 0);
+    const todayMin = (focusByDate()[dateKey(new Date())] || { min: 0 }).min;
+    $('#focusSummary').innerHTML = `Tổng kỳ này: <b>${fmtMin(totalMin)}</b> · <b>${totalCount}</b> phiên · Hôm nay: <b>${fmtMin(todayMin)}</b>`;
+
+    const inRange = state.focus.filter(f => focusRangeFilter(focusRange)(f.date));
+    const rows = inRange.slice(0, 8).map(f => `
+      <div class="focus-row">
+        <span class="focus-when">${fmtDay(f.date)} · ${focusTimeLabel(f)}</span>
+        <span class="focus-dur">${fmtMin(f.durationSec / 60)}</span>
+        <span class="tag">${f.mode === 'stopwatch' ? 'Bấm giờ' : 'Hẹn giờ'} · ${escapeHTML(f.status)}</span>
+        <span class="spacer"></span>
+        <button class="button ghost" data-del-focus="${f.id}" aria-label="Xóa phiên tập trung">✕</button>
+      </div>`).join('');
+    $('#focusRecent').innerHTML = `
+      <div class="day-list-head"><h2>Phiên trong kỳ</h2><span class="tag">${inRange.length}</span></div>
+      <div class="focus-list">${rows || '<div class="empty-note">Chưa có phiên tập trung nào trong kỳ.</div>'}</div>`;
+  }
+
   // Tài chính
   function renderFinance() {
     let income = 0, expense = 0;
@@ -1172,6 +1502,20 @@
       selectedYear = yy === new Date().getFullYear() ? null : yy;
       selectedDay = null;
       renderYears();
+      return;
+    }
+    const rangeBtn = e.target.closest('[data-focus-range]');
+    if (rangeBtn) { focusRange = rangeBtn.dataset.focusRange; renderFocusChart(); return; }
+    const delFocus = e.target.closest('[data-del-focus]');
+    if (delFocus) {
+      const id = Number(delFocus.dataset.delFocus);
+      const f = state.focus.find(x => x.id === id);
+      if (!f) return;
+      confirmModal('Xóa phiên tập trung', `Xóa phiên ${fmtMin(f.durationSec / 60)} ngày ${fmtDay(f.date)}?`, () => {
+        state.focus = state.focus.filter(x => x.id !== id);
+        saveState(); renderFocus(); renderYears();
+        showToast('Đã xóa phiên tập trung');
+      });
       return;
     }
     const collapseDay = e.target.closest('[data-collapse-day]');
@@ -1449,7 +1793,7 @@
       state.ui = keepUi;
       saveState(); setHeading();
       $('#settingsName').value = state.user.name;
-      renderTasks(); renderProjects(); renderFinance(); renderYears();
+      renderTasks(); renderProjects(); renderFinance(); renderYears(); renderFocus();
       showToast('Đã khôi phục dữ liệu mẫu');
     }
   });
@@ -1504,6 +1848,8 @@
     renderProjects();
     renderFinance();
     renderYears();
+    renderFocus();          // đồng hồ sẽ tự chạy tiếp nếu có phiên đang mở
+    setInterval(timerTick, 250);
 
     applyHeroes();
     renderHeroSettings();
@@ -1515,7 +1861,7 @@
       if (k !== lastDay) {
         lastDay = k;
         selectedDay = null;
-        renderYears(); renderTasks(); renderProjects();
+        renderYears(); renderTasks(); renderProjects(); renderFocus();
       }
     }, 30000);
   }
