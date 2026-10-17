@@ -3,7 +3,7 @@
 
 Chạy:  python3 server.py   → mở http://127.0.0.1:8000
 
-Dữ liệu được lưu trong thư mục data/ dưới dạng 7 file JSON.
+Dữ liệu được lưu trong thư mục data/ dưới dạng 8 file JSON.
 Server chỉ làm nhiệm vụ tách/ghép state <-> file, client giữ nguyên object state.
 """
 import json
@@ -26,6 +26,7 @@ SPLITS = {
     'assets.json': ['assets'],
     'activity-log.json': ['log'],
     'focus.json': ['focus', 'focusActive'],
+    'health.json': ['health'],
     'settings.json': ['user', 'goals', 'ui'],
 }
 ALL_KEYS = [k for keys in SPLITS.values() for k in keys]
