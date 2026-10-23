@@ -42,18 +42,17 @@
   #bgLayer { position: fixed; inset: 0; z-index: 0; }
   #bgLayer img, #bgLayer video { width: 100%; height: 100%; object-fit: cover; display: block; }
   #bgLayer:not(:empty)::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,.05); }
-  body.has-bg .page-head h1, body.has-bg .page-head .subtitle { text-shadow: 0 1px 8px rgba(0,0,0,.85); }
+  body.has-bg .page-head h1, body.has-bg .page-head .subtitle { text-shadow: 0 1px 8px rgba(0,0,0,.65); }
   body.has-bg .page-head .subtitle { color: #d4d4d4; }
   .app { position: relative; z-index: 1; }
-  body.has-bg .panel, body.has-bg .stat { background: rgba(10,10,10,.86); }
-  body.has-bg aside { background: rgba(0,0,0,.6); }
+  body.has-bg .panel, body.has-bg .stat { background: rgba(10,10,10,.65); }
+  body.has-bg aside { background: rgba(0,0,0,.35); }
   .aside-foot { margin-top: auto; padding: 16px 6px 0; display: grid; gap: 8px; }
-  .ui-hint { display: none; }
-  main { transition: opacity .3s ease, filter .3s ease, visibility 0s; }
+  .ui-hint { display: none; position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 5; }
+  main, aside { transition: opacity .3s ease, filter .3s ease, visibility 0s; }
   body.ui-hidden { overflow: hidden; }
-  body.ui-hidden main { opacity: 0; filter: blur(8px); visibility: hidden; pointer-events: none; transition: opacity .3s ease, filter .3s ease, visibility 0s linear .3s; }
+  body.ui-hidden main, body.ui-hidden aside { opacity: 0; filter: blur(8px); visibility: hidden; pointer-events: none; transition: opacity .3s ease, filter .3s ease, visibility 0s linear .3s; }
   body.ui-hidden .ui-hint { display: block; }
-  body.ui-hidden #hideUiBtn { display: none; }
   .button:disabled { opacity: .4; cursor: default; }
   .hero-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
   .hero-row:first-child { border-top: 0; padding-top: 0; }
@@ -119,6 +118,14 @@
   .chart-labels { display: flex; gap: 3px; margin-top: 6px; color: var(--muted); font-size: 10px; }
   .chart-labels span { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; }
   .focus-list { margin-top: 16px; }
+  /* "Phiên trong kỳ": tối đa 5 card, nhiều hơn thì cuộn trong khung 5 card */
+  .focus-scroll { max-height: calc(5 * 34px); overflow-y: auto; overscroll-behavior: contain; }
+  .focus-scroll .focus-row { height: 34px; padding: 0; box-sizing: border-box; }
+  .focus-scroll::-webkit-scrollbar { width: 6px; }
+  .focus-scroll::-webkit-scrollbar-track { background: transparent; }
+  .focus-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  .focus-scroll::-webkit-scrollbar-thumb:hover { background: #555; }
+  .focus-scroll { scrollbar-width: thin; scrollbar-color: #333 transparent; }
   .focus-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 12px; }
   .focus-row:first-child { border-top: 0; padding-top: 0; }
   .focus-row .focus-when { color: var(--muted); white-space: nowrap; }
@@ -131,12 +138,17 @@
   .seg button.active { background: #1a1a1a; color: var(--text); font-weight: 600; }
   .seg button:disabled { opacity: .35; cursor: default; }
   .timer-display { font-size: 46px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin: 4px 0 10px; }
+  /* Bấm vào khung giờ để sửa trực tiếp (chỉ khi đang rảnh) */
+  .timer-display.can-edit { cursor: pointer; border-radius: var(--radius); transition: background-color .2s ease; }
+  .timer-display.can-edit:hover { background: #141414; }
+  .timer-display .timer-edit { width: 100%; font-size: 46px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: 2px; color: var(--text); background: transparent; border: 0; border-bottom: 2px solid var(--text); border-radius: 0; padding: 0 0 2px; outline: none; }
+  .timer-display .timer-edit:focus { border-color: var(--text); }
   .timer-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
   .timer-presets .button { flex: 1; min-width: 46px; padding: 6px 8px; }
   .timer-presets .button.active { background: var(--text); color: #000; border-color: var(--text); font-weight: 600; }
   .timer-actions { display: flex; gap: 8px; margin-top: 14px; }
   .timer-actions .button { flex: 1; }
-  @media (max-width: 800px) { .timer-display { font-size: 38px; } }
+  @media (max-width: 800px) { .timer-display, .timer-display .timer-edit { font-size: 38px; } }
 
   /* ── Sức khỏe (Health & Fitness) ── */
   .sport-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -256,6 +268,7 @@
 </head>
 <body>
 <div id="bgLayer" aria-hidden="true"></div>
+<div class="note ui-hint">Di chuyển chuột hoặc nhấn phím bất kỳ để hiện thị</div>
 <div class="app">
   <aside>
     <div class="brand">Quản lý công việc</div>
@@ -269,7 +282,6 @@
     </nav>
     <div class="aside-foot">
       <button class="button" id="hideUiBtn">Ẩn giao diện</button>
-      <div class="note ui-hint">Nhấn Enter để hiện lại</div>
     </div>
   </aside>
 
@@ -311,17 +323,13 @@
             <button class="active" data-focus-mode="timer">Hẹn giờ</button>
             <button data-focus-mode="stopwatch">Bấm giờ</button>
           </div>
-          <div class="timer-display" id="timerDisplay">25:00</div>
+          <div class="timer-display" id="timerDisplay" title="Bấm để sửa thời gian">25:00</div>
           <div class="progress big" id="timerProgress"><span id="timerBar" style="width:100%"></span></div>
           <div class="timer-presets" id="timerPresets">
             <button class="button" data-preset="15">15'</button>
             <button class="button" data-preset="25">25'</button>
             <button class="button" data-preset="45">45'</button>
             <button class="button" data-preset="60">60'</button>
-          </div>
-          <div class="form-group" id="timerCustomGroup">
-            <label for="timerMinutes">Số phút tùy chỉnh (1–240)</label>
-            <input type="number" id="timerMinutes" min="1" max="240" value="25" />
           </div>
           <div class="timer-actions">
             <button class="button primary" id="timerToggle">Bắt đầu</button>
@@ -540,10 +548,11 @@
             <option value="30">Sau 30 giây</option>
             <option value="60">Sau 1 phút</option>
             <option value="120">Sau 2 phút</option>
+            <option value="150">Sau 2,5 phút</option>
             <option value="300">Sau 5 phút</option>
           </select>
         </div>
-        <p class="note">Khi giao diện ẩn chỉ còn hình nền và thanh điều hướng. Nhấn Enter để hiện lại.</p>
+        <p class="note">Tự ẩn nền: hết thời gian chờ thì ẩn, di chuyển chuột hoặc nhấn phím là hiện lại. Nút "Ẩn giao diện": ẩn khóa cứng, chỉ nhấn Enter mới hiện lại.</p>
       </section>
     </section>
   </main>
@@ -577,7 +586,7 @@
     focus: [],
     focusActive: null,
     health: { sports: [], workouts: [], activeSport: 'all' },
-    ui: { idleHide: 60 }
+    ui: { idleHide: 150 }
   };
 
   // State khởi tạo mặc định. Nạp thật từ server trong loadState() ở cuối script.
@@ -616,7 +625,7 @@
       .filter(w => w && w.sportId && /^\d{4}-\d{2}-\d{2}$/.test(w.date || ''))
       .map(w => ({ id: Number(w.id) || Date.now(), sportId: w.sportId, date: w.date, createdAt: w.createdAt || w.date, metrics: (w.metrics && typeof w.metrics === 'object') ? w.metrics : {} }));
     if (!s.log || typeof s.log !== 'object') s.log = {};
-    if (!s.ui) s.ui = { idleHide: 60 };
+    if (!s.ui) s.ui = { idleHide: 150 };
     s.transactions.forEach((t, i) => { if (!t.id) t.id = Date.now() + i; });
     // Migration: thêm ngày hẹn / ngày hoàn thành cho task cũ
     s.tasks.forEach(t => {
@@ -969,24 +978,41 @@
 
   // Ẩn / hiện giao diện
   let lastActive = Date.now();
+  let uiLock = false;   // true = ẩn bằng nút (khóa) → chỉ Enter mới hiện; false = ẩn nền (chuột/phím vẫn hiện)
   const uiHidden = () => document.body.classList.contains('ui-hidden');
+  const HINT_LOCKED = 'Nhấn Enter để hiện thị';
+  const HINT_IDLE = 'Di chuyển chuột hoặc nhấn phím bất kỳ để hiện thị';
 
-  function hideUI() {
+  function updateHint() {
+    const hint = $('.ui-hint');
+    if (hint) hint.textContent = uiLock ? HINT_LOCKED : HINT_IDLE;
+  }
+
+  function hideUI(lock = false) {
     if (uiHidden() || modalOverlay.classList.contains('open')) return;
     if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    uiLock = lock;
+    updateHint();
     document.body.classList.add('ui-hidden');
   }
   function showUI() {
     if (!uiHidden()) return;
+    uiLock = false;
     lastActive = Date.now();
+    updateHint();
     document.body.classList.remove('ui-hidden');
   }
 
+  // Đang ẩn: không bị khóa → bất kỳ phím / chuột / chạm / cuộn nào cũng hiện lại; bị khóa → bỏ qua
   ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll'].forEach(ev =>
-    window.addEventListener(ev, () => { if (!uiHidden()) lastActive = Date.now(); }, { passive: true }));
+    window.addEventListener(ev, () => {
+      if (uiHidden()) { if (!uiLock) showUI(); }
+      else lastActive = Date.now();
+    }, { passive: true }));
 
+  // Ẩn bằng nút (khóa) → chỉ phím Enter mới hiện lại
   document.addEventListener('keydown', e => {
-    if (uiHidden() && e.key === 'Enter') { e.preventDefault(); showUI(); }
+    if (uiHidden() && uiLock && e.key === 'Enter') { e.preventDefault(); showUI(); }
   }, true);
 
   setInterval(() => {
@@ -994,7 +1020,7 @@
     if (sec && !uiHidden() && Date.now() - lastActive >= sec * 1000) hideUI();
   }, 1000);
 
-  $('#hideUiBtn').addEventListener('click', hideUI);
+  $('#hideUiBtn').addEventListener('click', () => hideUI(true));
   $('#idleHide').addEventListener('change', e => {
     state.ui.idleHide = Number(e.target.value) || 0;
     lastActive = Date.now();
@@ -1286,7 +1312,10 @@
   const FOCUS_MIN_SEC = 60;   // phiên ngắn hơn 1 phút không ghi nhận (chống bấm nhầm)
   const FOCUS_MAX_MIN = 240;
   let focusRange = 'week';    // week | month | year
+  let focusListHidden = false; // ẩn/hiện danh sách "Phiên trong kỳ"
   let timerMode = 'timer';    // timer (hẹn giờ) | stopwatch (bấm giờ)
+  let pendingMin = 25;        // số phút hẹn giờ đang chờ (sửa trực tiếp trên khung giờ)
+  let editingTimer = false;   // đang ở chế độ sửa thời gian trên khung giờ
 
   function focusElapsed() {
     const fa = state.focusActive;
@@ -1296,7 +1325,7 @@
   }
   function focusRunning() { return !!(state.focusActive && !state.focusActive.paused); }
   function pendingDurationSec() {
-    const mins = Math.min(FOCUS_MAX_MIN, Math.max(1, Math.round(Number($('#timerMinutes').value) || 25)));
+    const mins = Math.min(FOCUS_MAX_MIN, Math.max(1, Math.round(Number(pendingMin) || 25)));
     return mins * 60;
   }
   function clockOf(iso) {
@@ -1345,14 +1374,15 @@
       b.disabled = running || elapsed > 0; // đang có phiên → không đổi chế độ
     });
 
-    $('#timerDisplay').textContent = fmtClock(isTimer ? durationSec - elapsed : elapsed);
+    if (fa && editingTimer) editingTimer = false;   // phiên khởi động → đóng luôn chế độ sửa
+    if (!editingTimer) $('#timerDisplay').textContent = fmtClock(isTimer ? durationSec - elapsed : elapsed);
     $('#timerProgress').style.display = isTimer ? '' : 'none';
     $('#timerBar').style.width = (isTimer && durationSec > 0 ? Math.max(0, Math.min(100, (1 - elapsed / durationSec) * 100)) : 100) + '%';
 
     $('#timerPresets').style.display = isTimer ? '' : 'none';
-    $('#timerCustomGroup').style.display = isTimer ? '' : 'none';
     $$('#timerPresets .button').forEach(b => b.classList.toggle('active', !fa && Number(b.dataset.preset) * 60 === durationSec));
-    $('#timerMinutes').disabled = running || elapsed > 0;
+    // Khung giờ chỉ sửa được khi rảnh (không có phiên) và đang ở chế độ hẹn giờ
+    $('#timerDisplay').classList.toggle('can-edit', isTimer && !fa && !editingTimer);
 
     $('#timerToggle').textContent = running ? 'Tạm dừng' : (fa ? 'Tiếp tục' : 'Bắt đầu');
     $('#timerFinish').disabled = !fa;   // luôn bấm được khi có phiên — phần ghi nhận tự lọc phiên < 1 phút
@@ -1370,15 +1400,67 @@
 
   $$('#timerModes button').forEach(b => b.addEventListener('click', () => {
     if (state.focusActive && focusElapsed() > 0) { showToast('Đang có phiên chưa ghi nhận — bấm Kết thúc hoặc Đặt lại trước'); return; }
+    if (editingTimer) { editingTimer = false; }   // đang sửa trên khung giờ → đóng chế độ sửa
     timerMode = b.dataset.focusMode;
     renderTimer();
   }));
   $$('#timerPresets .button').forEach(b => b.addEventListener('click', () => {
     if (state.focusActive && focusElapsed() > 0) return;
-    $('#timerMinutes').value = b.dataset.preset;
+    pendingMin = Number(b.dataset.preset);
+    if (editingTimer) editingTimer = false;   // chọn preset khi đang sửa → áp dụng luôn, đóng ô nhập
     renderTimer();
   }));
-  $('#timerMinutes').addEventListener('input', renderTimer);
+
+  // ── Sửa thời gian trực tiếp trên khung giờ (thay ô nhập phút tùy chỉnh) ──
+  // Chấp nhận: "45" (phút) · "1:30" (giờ:phút) · "1:30:00" (giờ:phút:giây)
+  function parseTimeInput(raw) {
+    const s = String(raw).trim().replace(/[^\d:]/g, '');
+    if (!s) return null;
+    const parts = s.split(':').map(Number);
+    if (parts.some(isNaN)) return null;
+    let mins;
+    if (parts.length === 1) mins = parts[0];
+    else if (parts.length === 2) mins = parts[0] * 60 + parts[1];
+    else if (parts.length === 3) mins = parts[0] * 60 + parts[1] + parts[2] / 60;
+    else return null;
+    if (mins <= 0) return null;
+    return Math.round(mins);
+  }
+
+  function commitTimerEdit(inp, cancel) {
+    editingTimer = false;
+    if (cancel) { renderTimer(); return; }
+    const mins = parseTimeInput(inp.value);
+    if (mins === null) { showToast('Giá trị không hợp lệ — giữ nguyên ' + pendingMin + ' phút'); renderTimer(); return; }
+    if (mins > FOCUS_MAX_MIN) { showToast('Tối đa ' + FOCUS_MAX_MIN + ' phút'); pendingMin = FOCUS_MAX_MIN; renderTimer(); return; }
+    pendingMin = Math.max(1, mins);
+    renderTimer();
+  }
+
+  $('#timerDisplay').addEventListener('click', () => {
+    if (editingTimer) return;
+    const fa = state.focusActive;
+    if (fa) { showToast('Đang có phiên — không sửa được thời gian'); return; }
+    if (timerMode !== 'timer') { showToast('Chế độ bấm giờ không cần đặt thời gian'); return; }
+    editingTimer = true;
+    const inp = document.createElement('input');
+    inp.className = 'timer-edit';
+    inp.type = 'text';
+    inp.inputMode = 'numeric';
+    inp.value = pendingMin >= 60 ? (Math.floor(pendingMin / 60) + ':' + String(pendingMin % 60).padStart(2, '0')) : String(pendingMin);
+    inp.setAttribute('aria-label', 'Sửa thời gian hẹn giờ (phút hoặc giờ:phút)');
+    $('#timerDisplay').innerHTML = '';
+    $('#timerDisplay').appendChild(inp);
+    inp.focus();
+    inp.select();
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commitTimerEdit(inp, false); }
+      else if (e.key === 'Escape') { e.preventDefault(); commitTimerEdit(inp, true); }
+    });
+    inp.addEventListener('blur', () => { if (editingTimer) commitTimerEdit(inp, false); });
+    // click preset khi đang sửa → giữ ô input (đồng bộ giá trị trong preset handler)
+    inp.addEventListener('click', e => e.stopPropagation());
+  });
 
   $('#timerToggle').addEventListener('click', () => {
     const fa = state.focusActive;
@@ -1483,7 +1565,7 @@
     $('#focusSummary').innerHTML = `Tổng kỳ này: <b>${fmtMin(totalMin)}</b> · <b>${totalCount}</b> phiên · Hôm nay: <b>${fmtMin(todayMin)}</b>`;
 
     const inRange = state.focus.filter(f => focusRangeFilter(focusRange)(f.date));
-    const rows = inRange.slice(0, 8).map(f => `
+    const rows = inRange.map(f => `
       <div class="focus-row">
         <span class="focus-when">${fmtDay(f.date)} · ${focusTimeLabel(f)}</span>
         <span class="focus-dur">${fmtMin(f.durationSec / 60)}</span>
@@ -1492,8 +1574,12 @@
         <button class="button ghost" data-del-focus="${f.id}" aria-label="Xóa phiên tập trung">✕</button>
       </div>`).join('');
     $('#focusRecent').innerHTML = `
-      <div class="day-list-head"><h2>Phiên trong kỳ</h2><span class="tag">${inRange.length}</span></div>
-      <div class="focus-list">${rows || '<div class="empty-note">Chưa có phiên tập trung nào trong kỳ.</div>'}</div>`;
+      <div class="day-list-head">
+        <h2>Phiên trong kỳ</h2>
+        <span class="tag">${inRange.length}</span>
+        ${inRange.length ? `<button class="button ghost" data-collapse-focus="1">${focusListHidden ? 'Mở ▾' : 'Thu lại ▲'}</button>` : ''}
+      </div>
+      <div class="focus-list focus-scroll" style="${focusListHidden ? 'display:none' : ''}">${rows || '<div class="empty-note">Chưa có phiên tập trung nào trong kỳ.</div>'}</div>`;
   }
 
   // ── Sức khỏe (Health & Fitness): môn thể dục, ma trận check-in, biểu đồ ──
@@ -1990,6 +2076,8 @@
     }
     const rangeBtn = e.target.closest('[data-focus-range]');
     if (rangeBtn) { focusRange = rangeBtn.dataset.focusRange; renderFocusChart(); return; }
+    const collapseFocus = e.target.closest('[data-collapse-focus]');
+    if (collapseFocus) { focusListHidden = !focusListHidden; renderFocusChart(); return; }
     const delFocus = e.target.closest('[data-del-focus]');
     if (delFocus) {
       const id = Number(delFocus.dataset.delFocus);
