@@ -8,6 +8,7 @@ Server chỉ làm nhiệm vụ tách/ghép state <-> file, client giữ nguyên 
 """
 import json
 import os
+import re
 import sys
 import threading
 import webbrowser
@@ -101,8 +102,32 @@ class Handler(BaseHTTPRequestHandler):
             if not os.path.exists(index_path):
                 self._send(404, 'Không tìm thấy index.html', 'text/plain; charset=utf-8')
                 return
-            with open(index_path, 'rb') as f:
-                self._send(200, f.read(), 'text/html; charset=utf-8')
+            with open(index_path, 'r', encoding='utf-8') as f:
+                html = f.read()
+            # Gộp các view từ views/*.html (chặn path traversal qua whitelist tên file)
+            for name in ('dashboard', 'tasks', 'projects', 'finance', 'health', 'settings'):
+                view_path = os.path.join(BASE_DIR, 'views', name + '.html')
+                fragment = ''
+                if os.path.exists(view_path):
+                    with open(view_path, 'r', encoding='utf-8') as f:
+                        fragment = f.read()
+                html = html.replace('<!--VIEW:%s-->' % name, fragment)
+            self._send(200, html, 'text/html; charset=utf-8')
+            return
+        # File tĩnh css/ & js/ — chỉ nhận basename nằm trong whitelist, không có '..'
+        m = re.match(r'^/(css|js)/([A-Za-z0-9_-]+\.(css|js))$', path)
+        if m:
+            sub, fname = m.group(1), m.group(2)
+            if not fname.endswith('.' + sub):  # css/* phải .css, js/* phải .js
+                self._send(404, json.dumps({'error': 'not found'}))
+                return
+            fpath = os.path.join(BASE_DIR, sub, fname)
+            if not os.path.exists(fpath):
+                self._send(404, json.dumps({'error': 'not found'}))
+                return
+            ctype = 'text/css; charset=utf-8' if sub == 'css' else 'text/javascript; charset=utf-8'
+            with open(fpath, 'rb') as f:
+                self._send(200, f.read(), ctype)
             return
         if path == '/api/state':
             self._send(200, json.dumps(read_state(), ensure_ascii=False))

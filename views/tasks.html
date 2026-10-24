@@ -1,0 +1,33 @@
+    <!-- Công việc -->
+    <section class="view" id="view-tasks">
+      <div class="page-head">
+        <div><h1>Công việc</h1><div class="subtitle">Task quá hạn bị ẩn — bấm ô ngày trong ma trận để xem và xử lý.</div></div>
+        <button class="button primary" id="addTaskBtn">+ Thêm công việc</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Tổng</div><div class="stat-value" id="taskTotal">0</div></div>
+        <div class="stat"><div class="stat-label">Hoàn thành</div><div class="stat-value" id="taskDone">0</div></div>
+        <div class="stat"><div class="stat-label">Chưa xong</div><div class="stat-value" id="taskPending">0</div></div>
+        <div class="stat"><div class="stat-label">Tỷ lệ</div><div class="stat-value" id="taskRate">0%</div></div>
+      </div>
+      <section class="panel">
+        <div class="toolbar">
+          <input id="taskSearch" placeholder="Tìm công việc..." />
+          <select id="taskFilterCategory">
+            <option value="all">Tất cả phân loại</option>
+            <option value="Học tập">Học tập</option>
+            <option value="Project">Project</option>
+            <option value="Tài chính">Tài chính</option>
+            <option value="Đời thường">Đời thường</option>
+            <option value="Khác">Khác</option>
+          </select>
+          <select id="taskFilter">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="open">Chưa xong</option>
+            <option value="done">Đã xong</option>
+          </select>
+        </div>
+        <div id="allTasks"></div>
+      </section>
+    </section>
+

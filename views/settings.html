@@ -1,0 +1,45 @@
+    <!-- Cài đặt -->
+    <section class="view" id="view-settings">
+      <div class="page-head"><div><h1>Cài đặt</h1></div></div>
+      <section class="panel" style="max-width:480px;">
+        <div class="form-group">
+          <label for="settingsName">Tên hiển thị</label>
+          <input id="settingsName" style="width:100%" />
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="button primary" id="saveSettings">Lưu</button>
+          <button class="button" id="resetData">Khôi phục dữ liệu mẫu</button>
+        </div>
+        <p class="note" style="margin-top:16px">Dữ liệu được lưu trong các file JSON ở thư mục <code>data/</code> (bên cạnh file này).</p>
+      </section>
+
+      <section class="panel" style="max-width:480px;margin-top:16px;">
+        <div class="panel-head"><h2>Sao lưu</h2></div>
+        <p class="note" style="margin-bottom:12px">Tải toàn bộ dữ liệu (8 file JSON) về máy dưới dạng một file ZIP.</p>
+        <button class="button" id="backupBtn">Tải bản sao lưu ZIP</button>
+      </section>
+
+      <section class="panel" style="max-width:480px;margin-top:16px;">
+        <div class="panel-head"><h2>Hình nền trang</h2></div>
+        <div id="heroSettings"></div>
+        <p class="note" style="margin-top:16px">Hỗ trợ ảnh hoặc video (tối đa 50MB), lưu ngay trên trình duyệt này.</p>
+        <input type="file" id="heroFile" accept="image/*,video/*" hidden>
+      </section>
+
+      <section class="panel" style="max-width:480px;margin-top:16px;">
+        <div class="panel-head"><h2>Giao diện</h2></div>
+        <div class="form-group">
+          <label for="idleHide">Tự ẩn giao diện khi không thao tác</label>
+          <select id="idleHide">
+            <option value="0">Tắt</option>
+            <option value="10">Sau 10 giây</option>
+            <option value="30">Sau 30 giây</option>
+            <option value="60">Sau 1 phút</option>
+            <option value="120">Sau 2 phút</option>
+            <option value="150">Sau 2,5 phút</option>
+            <option value="300">Sau 5 phút</option>
+          </select>
+        </div>
+        <p class="note">Tự ẩn nền: hết thời gian chờ thì ẩn, di chuyển chuột hoặc nhấn phím là hiện lại. Nút "Ẩn giao diện": ẩn khóa cứng, chỉ nhấn Enter mới hiện lại.</p>
+      </section>
+    </section>

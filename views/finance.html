@@ -1,0 +1,60 @@
+    <!-- Tài chính -->
+    <section class="view" id="view-finance">
+      <div class="page-head">
+        <div><h1>Tài chính</h1></div>
+        <div style="display:flex;gap:8px;">
+          <button class="button" id="openGoalSettings">Mục tiêu</button>
+          <button class="button primary" id="addTransactionBtn">+ Thêm giao dịch</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Thu nhập tháng</div><div class="stat-value" id="finIncome">0</div><div class="stat-foot">Mục tiêu: <span id="statGoalIncome">0</span></div></div>
+        <div class="stat"><div class="stat-label">Chi tiêu tháng</div><div class="stat-value" id="finExpense">0</div></div>
+        <div class="stat"><div class="stat-label">Tổng tài sản</div><div class="stat-value" id="finTotalAsset">0 ₫</div></div>
+        <div class="stat"><div class="stat-label">Mục tiêu tài sản</div><div class="stat-value" id="finGoalAssetShow">0</div><div class="stat-foot" id="finGoalAssetComp"></div></div>
+      </div>
+
+      <section class="panel" id="minExpensePanel" style="margin-bottom:16px;">
+        <div class="panel-head">
+          <h2>Chi tiêu tối thiểu</h2>
+          <span class="note" id="minExpPct">0%</span>
+        </div>
+        <p class="note" style="margin:-8px 0 14px;">Chi tiêu tối thiểu là chi tiêu phục vụ đời sống bắt buộc và không cắt bỏ được, ví dụ tiền thuê nhà, điện nước, đồ ăn.</p>
+        <div class="exp-line">
+          <span class="muted">Còn lại trong ví tháng này</span>
+          <span id="minExpRemain">0 ₫</span>
+        </div>
+        <div class="progress big"><span id="minExpBar" style="width:0%"></span></div>
+        <div class="exp-line" style="margin:8px 0 0;">
+          <span class="note" id="minExpNote"></span>
+          <span class="note" id="minExpTarget"></span>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-bottom:16px;">
+        <div class="panel-head"><h2>Giao dịch</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Ngày</th><th>Tên</th><th>Danh mục</th><th>Loại</th><th>Số tiền</th><th></th></tr></thead>
+            <tbody id="transactionsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Tài sản</h2>
+          <button class="button primary" id="addAssetBtn">+ Thêm tài sản</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Tên</th><th>Phân loại</th><th>Giá vốn</th><th>Giá hiện tại</th><th>Chênh lệch</th><th>Thu nhập thụ động</th><th></th></tr>
+            </thead>
+            <tbody id="assetsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+

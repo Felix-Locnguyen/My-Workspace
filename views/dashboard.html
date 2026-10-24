@@ -1,0 +1,76 @@
+    <!-- Tổng quan -->
+    <section class="view active" id="view-dashboard">
+      <div class="page-head">
+        <div><h1 id="welcomeHeading">Xin chào.</h1><div class="subtitle" id="today"></div></div>
+        <button class="button primary" id="quickAdd">+ Thêm công việc</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Công việc hoàn thành</div><div class="stat-value" id="dashTaskStat">0/0</div></div>
+        <div class="stat"><div class="stat-label">Dự án</div><div class="stat-value" id="dashProjectCount">0</div></div>
+        <div class="stat"><div class="stat-label">Dòng tiền ròng</div><div class="stat-value" id="dashNetCash">0 ₫</div></div>
+        <div class="stat"><div class="stat-label">Tổng tài sản</div><div class="stat-value" id="dashAssets">0 ₫</div></div>
+      </div>
+
+      <!-- Thời gian tập trung: biểu đồ (trái) + bộ đếm giờ (phải) — nằm trên ma trận -->
+      <div class="grid-2" style="margin-bottom:16px;">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Thời gian tập trung</h2>
+            <span class="range-tabs">
+              <button class="year-btn active" data-focus-range="week">Tuần</button>
+              <button class="year-btn" data-focus-range="month">Tháng</button>
+              <button class="year-btn" data-focus-range="year">Năm</button>
+            </span>
+          </div>
+          <div class="focus-summary" id="focusSummary"></div>
+          <div class="chart" id="focusChart"></div>
+          <div class="chart-labels" id="focusChartLabels"></div>
+          <div id="focusRecent"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>Bộ đếm giờ</h2><span class="note" id="timerState">Sẵn sàng</span></div>
+          <div class="seg" id="timerModes">
+            <button class="active" data-focus-mode="timer">Hẹn giờ</button>
+            <button data-focus-mode="stopwatch">Bấm giờ</button>
+          </div>
+          <div class="timer-display" id="timerDisplay" title="Bấm để sửa thời gian">25:00</div>
+          <div class="progress big" id="timerProgress"><span id="timerBar" style="width:100%"></span></div>
+          <div class="timer-presets" id="timerPresets">
+            <button class="button" data-preset="15">15'</button>
+            <button class="button" data-preset="25">25'</button>
+            <button class="button" data-preset="45">45'</button>
+            <button class="button" data-preset="60">60'</button>
+          </div>
+          <div class="timer-actions">
+            <button class="button primary" id="timerToggle">Bắt đầu</button>
+            <button class="button" id="timerReset">Đặt lại</button>
+            <button class="button" id="timerFinish">Kết thúc</button>
+          </div>
+          <p class="note" style="margin-top:12px;line-height:1.45">Chỉ <b>hết giờ</b> hoặc bấm <b>Kết thúc</b> mới ghi nhận vào dữ liệu (tối thiểu 1 phút). <b>Tạm dừng / Đặt lại</b> không tính.</p>
+        </section>
+      </div>
+
+      <div id="yearCards" class="year-cards"></div>
+
+      <div class="grid-2">
+        <section class="panel">
+          <div class="panel-head"><h2>Công việc gần đây</h2><button class="button ghost" data-go="tasks">Xem tất cả →</button></div>
+          <div id="dashboardTasks"></div>
+        </section>
+        <div class="col">
+          <section class="panel">
+            <div class="panel-head"><h2>Dự án</h2><button class="button ghost" data-go="projects">Xem tất cả →</button></div>
+            <div id="dashProjectsList"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>Thu chi tháng</h2></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="muted">Thu nhập</span><span id="dashIncome">0 ₫</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span class="muted">Chi tiêu</span><span id="dashExpense">0 ₫</span></div>
+            <div class="progress"><span id="dashExpenseBar" style="width:0%"></span></div>
+          </section>
+        </div>
+      </div>
+    </section>
+

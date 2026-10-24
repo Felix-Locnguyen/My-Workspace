@@ -1,0 +1,41 @@
+    <!-- Sức khỏe -->
+    <section class="view" id="view-health">
+      <div class="page-head">
+        <div><h1>Sức khỏe</h1><div class="subtitle">Buổi tập, chuỗi ngày tập luyện và thống kê theo từng môn.</div></div>
+        <div style="display:flex;gap:8px;">
+          <button class="button" id="manageSportsBtn">Quản lý môn</button>
+          <button class="button primary" id="addWorkoutBtn">+ Buổi tập</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Chuỗi hiện tại</div><div class="stat-value" id="hStreakNow">0 ngày</div><div class="stat-foot" id="hStreakNote"></div></div>
+        <div class="stat"><div class="stat-label">Chuỗi dài nhất</div><div class="stat-value" id="hStreakBest">0 ngày</div></div>
+        <div class="stat"><div class="stat-label">Buổi tập 7 ngày qua</div><div class="stat-value" id="hWeekCount">0</div></div>
+        <div class="stat"><div class="stat-label">Tổng số buổi</div><div class="stat-value" id="hTotalCount">0</div></div>
+      </div>
+
+      <section class="panel" style="margin-bottom:16px;">
+        <div class="panel-head"><h2>Ma trận check-in</h2></div>
+        <div id="healthSports" class="sport-chips"></div>
+        <div id="healthMatrix"></div>
+      </section>
+
+      <section class="panel" style="margin-bottom:16px;">
+        <div class="panel-head">
+          <h2>Biểu đồ theo môn</h2>
+          <span class="range-tabs" id="healthChartTabs">
+            <button class="year-btn" data-hchart="week">Tuần</button>
+            <button class="year-btn" data-hchart="month">Tháng</button>
+            <button class="year-btn active" data-hchart="year">Năm</button>
+          </span>
+        </div>
+        <div id="healthCharts"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Lịch sử tập luyện</h2><span class="note" id="workoutCount"></span></div>
+        <div id="workoutLogList"></div>
+      </section>
+    </section>
+
