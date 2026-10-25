@@ -29,7 +29,7 @@
     const detailContainer = $('#projectDetailContainer');
 
     const projectMarkup = p => `
-      <div class="project-row" data-open-project="${escapeHTML(p.title)}">
+      <div class="project-row" data-dnd-item="${p.id}" data-open-project="${escapeHTML(p.title)}">
         <div>
           <div class="project-title">${escapeHTML(p.title)}</div>
           <div class="project-desc">${escapeHTML(p.desc)}</div>
@@ -66,9 +66,18 @@
     const doneTasks = pTasks.filter(t => t.status === 'done');
 
     const renderCard = t => `
-      <div class="card${isOverdue(t) ? ' overdue' : ''}" data-edit-task="${t.id}">
+      <div class="card${isOverdue(t) ? ' overdue' : ''}" data-dnd-item="${t.id}" data-edit-task="${t.id}">
         <div style="font-size:13px;">${escapeHTML(t.title)}</div>
         <div class="task-meta">${escapeHTML(t.meta)}${dueLabel(t)}</div>
+      </div>`;
+
+    // Mỗi cột là 1 group kéo-thả riêng (data-dnd-col = trạng thái khi thả vào)
+    const kanbanCol = (title, list, col) => `
+      <div class="panel">
+        <div class="panel-head"><h2>${title}</h2><span class="tag">${list.length}</span></div>
+        <div class="col-scroll list-scroll thin-scroll" data-dnd-group="kanban" data-dnd-col="${col}">
+          ${list.map(renderCard).join('') || '<div class="empty-note">Trống</div>'}
+        </div>
       </div>`;
 
     detailContainer.innerHTML = `
@@ -81,9 +90,9 @@
         <div style="display:flex;gap:8px;"><button class="button" data-edit-project="${proj.id}">Sửa dự án</button><button class="button primary" id="addProjTaskBtn">+ Thêm task</button></div>
       </div>
       <div class="kanban">
-        <div class="panel"><div class="panel-head"><h2>Chưa làm</h2><span class="tag">${todoTasks.length}</span></div>${todoTasks.map(renderCard).join('') || '<div class="empty-note">Trống</div>'}</div>
-        <div class="panel"><div class="panel-head"><h2>Đang làm</h2><span class="tag">${doingTasks.length}</span></div>${doingTasks.map(renderCard).join('') || '<div class="empty-note">Trống</div>'}</div>
-        <div class="panel"><div class="panel-head"><h2>Hoàn thành</h2><span class="tag">${doneTasks.length}</span></div>${doneTasks.map(renderCard).join('') || '<div class="empty-note">Trống</div>'}</div>
+        ${kanbanCol('Chưa làm', todoTasks, 'todo')}
+        ${kanbanCol('Đang làm', doingTasks, 'doing')}
+        ${kanbanCol('Hoàn thành', doneTasks, 'done')}
       </div>`;
 
     applyHeroes();
@@ -116,6 +125,37 @@
     });
   }
 
+
+  // Kéo – thả trong Danh sách dự án (cùng list)
+  DND.handlers.projectList = ({ orderedIds }) => {
+    state.projects = reorderSubset(state.projects, orderedIds);
+    saveState();
+    renderProjects();
+    showToast('Đã đổi thứ tự dự án');
+  };
+
+  // Kéo – thả liên cột Kanban: đổi trạng thái đúng ngữ nghĩa ô checkbox
+  // (todo → chưa làm, doing → đang làm, done → hoàn thành + ghi ngày xong).
+  DND.handlers.kanban = ({ itemId, orderedIds, container }) => {
+    const t = state.tasks.find(x => String(x.id) === String(itemId));
+    if (!t) return;
+    const col = container.dataset.dndCol;
+    if (col === 'done') {
+      t.status = 'done';
+      t.inProgress = false;
+      if (!t.completedAt) t.completedAt = dateKey(new Date());
+    } else {
+      t.status = 'open';
+      t.inProgress = col === 'doing';
+      t.completedAt = null;
+    }
+    state.tasks = reorderSubset(state.tasks, orderedIds);
+    saveState();
+    renderTasks();
+    renderProjects();   // vẽ lại 3 cột (đồng thời refresh list Dự án + dashboard)
+    renderYears();      // ma trận chỉ đếm task hoàn thành
+    showToast(col === 'done' ? 'Đã chuyển sang Hoàn thành' : col === 'doing' ? 'Đang làm' : 'Chưa làm');
+  };
 
   // Thêm dự án
   $('#addProjectBtn').addEventListener('click', () => {

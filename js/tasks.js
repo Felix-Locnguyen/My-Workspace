@@ -34,7 +34,7 @@
   // Công việc
   function renderTasks() {
     const taskMarkup = t => `
-      <div class="task-row ${t.status === 'done' ? 'done' : ''}">
+      <div class="task-row ${t.status === 'done' ? 'done' : ''}" data-dnd-item="${t.id}">
         <input class="check" type="checkbox" data-task-id="${t.id}" ${t.status === 'done' ? 'checked' : ''} aria-label="Hoàn thành công việc">
         <div>
           <div class="task-title">${escapeHTML(t.title)}</div>
@@ -67,6 +67,15 @@
     $('#dashTaskStat').textContent = `${doneCount}/${totalCount}`;
   }
 
+
+  // Kéo – thả trong Danh sách công việc: chỉ hoán vị các item ĐANG hiển thị
+  // (bị filter/search ẩn thì giữ nguyên chỗ trong state.tasks).
+  DND.handlers.taskList = ({ orderedIds }) => {
+    state.tasks = reorderSubset(state.tasks, orderedIds);
+    saveState();
+    renderTasks();
+    showToast('Đã đổi thứ tự công việc');
+  };
 
   // Thêm công việc
   function promptTaskModal() {

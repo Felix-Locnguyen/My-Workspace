@@ -63,14 +63,8 @@
           <h2>Tài sản</h2>
           <button class="button primary" id="addAssetBtn">+ Thêm tài sản</button>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Tên</th><th>Phân loại</th><th>Giá vốn</th><th>Giá hiện tại</th><th>Chênh lệch</th><th>Thu nhập thụ động</th><th></th></tr>
-            </thead>
-            <tbody id="assetsTableBody"></tbody>
-          </table>
-        </div>
+        <!-- Card thay bảng: cuộn trong khung cố định + kéo thả đổi thứ tự (local) -->
+        <div id="assetsList" class="list-scroll thin-scroll" data-dnd-group="assetList"></div>
       </section>
     </section>
 

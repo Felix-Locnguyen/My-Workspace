@@ -114,19 +114,28 @@
     renderTxRows();   // bảng theo bộ lọc; stat cards vẫn tính trên toàn bộ giao dịch
 
     let totalAsset = 0;
-    $('#assetsTableBody').innerHTML = state.assets.map(ast => {
+    // Card thay bảng: đủ 6 trường (tên/loại/giá vốn/giá hiện tại/chênh/thụ động),
+    // mọi số tiền vẫn đi qua fmt() → ẩn/hiện số tiền toàn cục áp dụng ngay.
+    $('#assetsList').innerHTML = state.assets.map(ast => {
       totalAsset += Number(ast.currentPrice) || 0;
-      const diff = Number(ast.costPrice) > 0 ? (((Number(ast.currentPrice) - Number(ast.costPrice)) / Number(ast.costPrice)) * 100).toFixed(2) : 0;
-      return `<tr>
-        <td>${escapeHTML(ast.name)}</td>
-        <td class="muted">${escapeHTML(ast.type)}</td>
-        <td>${fmt(ast.costPrice)}</td>
-        <td>${fmt(ast.currentPrice)}</td>
-        <td>${diff >= 0 ? '+' : ''}${diff}%</td>
-        <td>${fmt(ast.passiveIncome || 0)}</td>
-        <td style="white-space:nowrap"><button class="button ghost" data-edit-asset="${ast.id}">Sửa</button><button class="button ghost" data-delete-asset="${ast.id}">Xóa</button></td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="7" class="empty-note">Chưa có tài sản.</td></tr>';
+      const diff = Number(ast.costPrice) > 0 ? (((Number(ast.currentPrice) - Number(ast.costPrice)) / Number(ast.costPrice)) * 100).toFixed(2) : '0';
+      const up = Number(diff) >= 0;
+      return `<div class="asset-card" data-dnd-item="${ast.id}">
+        <div class="asset-card-main">
+          <div class="asset-name">${escapeHTML(ast.name)}</div>
+          <div class="asset-meta">${escapeHTML(ast.type)} · Chênh lệch <b class="${up ? 'up' : 'down'}">${up ? '+' : ''}${diff}%</b></div>
+        </div>
+        <div class="asset-nums">
+          <span><i>Giá vốn</i><b>${fmt(ast.costPrice)}</b></span>
+          <span><i>Giá hiện tại</i><b>${fmt(ast.currentPrice)}</b></span>
+          <span><i>Thu thụ động</i><b>${fmt(ast.passiveIncome || 0)}</b></span>
+        </div>
+        <div class="asset-actions">
+          <button class="button ghost" data-edit-asset="${ast.id}">Sửa</button>
+          <button class="button ghost" data-delete-asset="${ast.id}" aria-label="Xóa">✕</button>
+        </div>
+      </div>`;
+    }).join('') || '<div class="empty-note">Chưa có tài sản.</div>';
 
     const goalIncome = state.goals.monthlyIncome;
     const goalAsset = state.goals.assetGoal;
@@ -180,6 +189,14 @@
   }));
   $('#txFrom').addEventListener('change', e => { txFrom = e.target.value; if (txFilter === 'custom') renderTxRows(); });
   $('#txTo').addEventListener('change', e => { txTo = e.target.value; if (txFilter === 'custom') renderTxRows(); });
+
+  // Kéo – thả trong Danh sách tài sản (cùng list)
+  DND.handlers.assetList = ({ orderedIds }) => {
+    state.assets = reorderSubset(state.assets, orderedIds);
+    saveState();
+    renderFinance();
+    showToast('Đã đổi thứ tự tài sản');
+  };
 
   // Mục tiêu tài chính
   $('#openGoalSettings').addEventListener('click', () => {
