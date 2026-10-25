@@ -59,19 +59,59 @@
     });
   }
 
-  function renderFinance() {
-    let income = 0, expense = 0;
-    $('#transactionsTable').innerHTML = state.transactions.map(tr => {
-      if (tr.type === 'Income') income += tr.amount; else expense += tr.amount;
-      return `<tr>
+  // ── Bộ lọc giao dịch — chạy local trên state đang có, không gọi API ──
+  // Date lưu không có năm ("24/10" hoặc "24-10") → so sánh theo tháng*100+ngày.
+  let txFilter = 'today';        // today | day | month | custom
+  let txFrom = '', txTo = '';    // yyyy-mm-dd từ input type=date
+
+  const txKey = s => {           // "24/10" | "24-10" → 1024, hỏng → -1
+    const m = String(s || '').match(/(\d{1,2})\D+(\d{1,2})/);
+    if (!m) return -1;
+    const d = +m[1], mo = +m[2];
+    return (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) ? mo * 100 + d : -1;
+  };
+  const inputKey = v => {        // "2026-10-25" → 1025
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+    return m ? (+m[2]) * 100 + (+m[3]) : -1;
+  };
+
+  function txInRange(tr) {
+    const k = txKey(tr.date);
+    if (k < 0) return txFilter === 'today';   // ngày hỏng → chỉ hiện ở chế độ mặc định
+    const now = new Date();
+    const today = (now.getMonth() + 1) * 100 + now.getDate();
+    if (txFilter === 'today') return k <= today;                       // Đến hôm nay (mặc định)
+    if (txFilter === 'day') return k === today;                        // Trong ngày
+    if (txFilter === 'month') return Math.floor(k / 100) === now.getMonth() + 1;  // Tháng này
+    const a = inputKey(txFrom), b = inputKey(txTo);                    // Tùy chọn: từ → đến
+    if (a < 0 && b < 0) return true;
+    if (a >= 0 && k < a) return false;
+    if (b >= 0 && k > b) return false;
+    return true;
+  }
+
+  // Bảng giao dịch: tối đa 5 dòng trong khung + thanh cuộn dọc (css .tx-scroll)
+  function renderTxRows() {
+    const rows = state.transactions.filter(txInRange);
+    $('#transactionsTable').innerHTML = rows.map(tr => `<tr>
         <td class="muted">${escapeHTML(tr.date)}</td>
         <td>${escapeHTML(tr.name)}</td>
         <td class="muted">${escapeHTML(tr.category)}</td>
         <td>${tr.type === 'Income' ? 'Thu' : 'Chi'}</td>
         <td>${tr.type === 'Income' ? '+' : '−'}${fmt(Math.abs(tr.amount))}</td>
         <td style="white-space:nowrap"><button class="button ghost" data-edit-tx="${tr.id}">Sửa</button><button class="button ghost" data-delete-tx="${tr.id}">Xóa</button></td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="6" class="empty-note">Chưa có giao dịch.</td></tr>';
+      </tr>`).join('') || '<tr><td colspan="6" class="empty-note">Không có giao dịch trong kỳ đã chọn.</td></tr>';
+    $('#txCount').textContent = rows.length === state.transactions.length
+      ? rows.length + ' giao dịch'
+      : rows.length + '/' + state.transactions.length + ' giao dịch';
+  }
+
+  function renderFinance() {
+    let income = 0, expense = 0;
+    state.transactions.forEach(tr => {
+      if (tr.type === 'Income') income += tr.amount; else expense += tr.amount;
+    });
+    renderTxRows();   // bảng theo bộ lọc; stat cards vẫn tính trên toàn bộ giao dịch
 
     let totalAsset = 0;
     $('#assetsTableBody').innerHTML = state.assets.map(ast => {
@@ -130,6 +170,16 @@
       panel.style.display = 'none';
     }
   }
+
+  // ── Điều khiển bộ lọc giao dịch (4 nút + 2 ô ngày, local) ──
+  $$('#txFilter [data-tx-filter]').forEach(btn => btn.addEventListener('click', () => {
+    txFilter = btn.dataset.txFilter;
+    $$('#txFilter [data-tx-filter]').forEach(b => b.classList.toggle('active', b === btn));
+    $('#txRangeBox').hidden = txFilter !== 'custom';
+    renderTxRows();
+  }));
+  $('#txFrom').addEventListener('change', e => { txFrom = e.target.value; if (txFilter === 'custom') renderTxRows(); });
+  $('#txTo').addEventListener('change', e => { txTo = e.target.value; if (txFilter === 'custom') renderTxRows(); });
 
   // Mục tiêu tài chính
   $('#openGoalSettings').addEventListener('click', () => {

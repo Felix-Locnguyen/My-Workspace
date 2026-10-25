@@ -199,6 +199,20 @@
   .empty-note { color: var(--muted); font-size: 13px; padding: 12px 0; }
 
   .table-wrap { overflow-x: auto; }
+
+  /* ── Giao dịch: bộ lọc local + bảng giới hạn 5 dòng/khung, có thanh cuộn dọc ── */
+  .tx-filter { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tx-filter .year-btn { padding: 5px 12px; font-size: 12px; border: 1px solid transparent; }
+  .tx-filter .year-btn:hover { border-color: var(--line); }
+  .tx-range { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .tx-range[hidden] { display: none; }
+  .tx-range input { font-size: 13px; color-scheme: dark; }
+  .tx-scroll { max-height: calc(39px + 5 * 41px); overflow-y: auto; overscroll-behavior: contain; }
+  .tx-scroll thead th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+  .tx-scroll::-webkit-scrollbar { width: 8px; }
+  .tx-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  .tx-scroll::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+
   table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 13px; }
   th { color: var(--muted); text-align: left; font-weight: 500; font-size: 12px; }
   th, td { border-bottom: 1px solid var(--line); padding: 12px 10px; }

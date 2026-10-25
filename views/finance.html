@@ -33,8 +33,24 @@
       </section>
 
       <section class="panel" style="margin-bottom:16px;">
-        <div class="panel-head"><h2>Giao dịch</h2></div>
-        <div class="table-wrap">
+        <div class="panel-head">
+          <h2>Giao dịch</h2>
+          <span class="note" id="txCount"></span>
+        </div>
+
+        <!-- Bộ lọc chạy local trên state đang có, không gọi API -->
+        <div class="tx-filter" id="txFilter">
+          <button class="year-btn active" data-tx-filter="today">Tất cả</button>
+          <button class="year-btn" data-tx-filter="day">Trong ngày</button>
+          <button class="year-btn" data-tx-filter="month">Tháng này</button>
+          <button class="year-btn" data-tx-filter="custom">Tùy chọn</button>
+        </div>
+        <div class="tx-range" id="txRangeBox" hidden>
+          <label class="note">Từ <input type="date" id="txFrom" /></label>
+          <label class="note">Đến <input type="date" id="txTo" /></label>
+        </div>
+
+        <div class="table-wrap tx-scroll">
           <table>
             <thead><tr><th>Ngày</th><th>Tên</th><th>Danh mục</th><th>Loại</th><th>Số tiền</th><th></th></tr></thead>
             <tbody id="transactionsTable"></tbody>
