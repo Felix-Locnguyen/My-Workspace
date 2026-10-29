@@ -82,7 +82,7 @@
       (t.status !== 'done' && t.dueDate === selectedDay)
     );
     const rows = dayTasks.map(t => `
-      <div class="task-row ${t.status === 'done' ? 'done' : (isOverdue(t) ? 'overdue' : '')}">
+      <div class="task-row ${t.status === 'done' ? 'done' : (isOverdue(t) ? 'overdue' : '')}" data-dnd-item="${t.id}">
         <input class="check" type="checkbox" data-daytask-id="${t.id}" ${t.status === 'done' ? 'checked' : ''} aria-label="Hoàn thành công việc">
         <div>
           <div class="task-title">${escapeHTML(t.title)}</div>
@@ -118,10 +118,22 @@
         <h2>Công việc ngày ${fmtDay(selectedDay)}</h2>
         <button class="button ghost" data-collapse-day="1">Thu lại ▲</button>
       </div>
-      ${rows || '<div class="empty-note">Không có công việc nào trong ngày này.</div>'}
+      <!-- Kéo thả đổi thứ tự trong ngày + khung cuộn khi nhiều việc -->
+      <div id="dayTaskRows" class="list-scroll thin-scroll" data-dnd-group="dayTaskList">
+        ${rows || '<div class="empty-note">Không có công việc nào trong ngày này.</div>'}
+      </div>
       <div class="day-list-head"><h2>Phiên tập trung</h2><span class="tag">${dayFocus.length}</span></div>
       <div class="focus-list">${focusRows || '<div class="empty-note">Không có phiên tập trung nào trong ngày này.</div>'}</div>
       <div class="day-list-head"><h2>Buổi tập</h2><span class="tag">${dayWorkouts.length}</span></div>
       <div class="focus-list">${workoutRows || '<div class="empty-note">Không có buổi tập nào trong ngày này.</div>'}</div>`;
   }
+
+  // Kéo – thả list công việc trong ma trận (cùng ngày đang chọn)
+  DND.handlers.dayTaskList = ({ orderedIds }) => {
+    state.tasks = reorderSubset(state.tasks, orderedIds);
+    saveState();
+    renderTasks();         // list chính + list "Công việc gần đây"
+    renderDayTaskList();   // list trong ma trận (renderTasks không đụng tới nó)
+    showToast('Đã đổi thứ tự công việc trong ngày');
+  };
 

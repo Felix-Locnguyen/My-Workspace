@@ -199,6 +199,40 @@
   input, select { color: var(--text); background: #000; border: 1px solid var(--line); border-radius: var(--radius); padding: 9px 10px; outline: none; }
   input:focus, select:focus { border-color: #777; }
   .toolbar input { flex: 1; min-width: 180px; }
+
+  /* ── Bộ lọc thời gian: chip + LỊCH popup (thay cho dropdown) ── */
+  .time-filter { position: relative; display: flex; align-items: center; gap: 4px; }
+  .time-btn { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .time-btn .icon-cal { width: 15px; height: 15px; flex: none; opacity: .75; }
+  .time-btn.active { border-color: var(--text); color: var(--text); }
+  .time-btn.active .icon-cal { opacity: 1; }
+  .cal-pop {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
+    width: 300px; max-width: calc(100vw - 32px);
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 10px; box-shadow: 0 18px 44px rgba(0,0,0,.65);
+  }
+  .cal-modes { display: flex; gap: 4px; margin-bottom: 8px; }
+  .cal-modes .year-btn { flex: 1; text-align: center; padding: 6px 8px; font-size: 12px; border: 1px solid transparent; }
+  .cal-modes .year-btn:not(.active):hover { border-color: var(--line); }
+  .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
+  .cal-head b { font-size: 13px; font-weight: 600; }
+  .cal-head .year-btn { padding: 2px 10px; font-size: 17px; line-height: 1.2; text-align: center; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-grid.g12 { grid-template-columns: repeat(4, 1fr); }
+  .cal-grid.g9 { grid-template-columns: repeat(3, 1fr); }
+  .cal-dow { color: var(--muted); font-size: 10px; text-align: center; padding: 3px 0; }
+  .cal-cell {
+    min-height: 34px; padding: 0; border: 1px solid transparent; border-radius: var(--radius);
+    background: transparent; color: var(--text); font-size: 12px; cursor: pointer;
+  }
+  .cal-cell:hover { background: #1a1a1a; }
+  .cal-cell.dim { color: #5a5a5a; }
+  .cal-cell.today { border-color: #555; }
+  .cal-cell.sel { background: var(--text); border-color: var(--text); color: #000; font-weight: 600; }
+  .cal-cell:focus-visible { outline: 1px solid var(--text); outline-offset: 1px; }
+  .cal-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  @media (max-width: 800px) { .cal-pop { right: auto; left: 0; } }
   .empty-note { color: var(--muted); font-size: 13px; padding: 12px 0; }
 
   .table-wrap { overflow-x: auto; }
@@ -228,6 +262,7 @@
   .kanban .col-scroll.list-scroll { max-height: 420px; }           /* ≈ 6 card Kanban */
   #assetsList.list-scroll { max-height: 320px; }                   /* ≈ 5 card tài sản */
   #dashboardTasks.list-scroll, #dashProjectsList.list-scroll { max-height: 300px; }
+  #dayTaskRows.list-scroll { max-height: 300px; }                 /* list "Công việc ngày" trong ma trận */
 
   /* ── Kéo – thả: card đang kéo (elevation + opacity + cursor grabbing) ── */
   [data-dnd-item] { touch-action: pan-y; user-select: none; -webkit-user-select: none; }

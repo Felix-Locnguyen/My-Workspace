@@ -152,9 +152,11 @@
     const net = income - expense;
     $('#dashNetCash').textContent = (net >= 0 ? '+' : '−') + fmt(Math.abs(net));
     $('#dashAssets').textContent = fmt(totalAsset);
-    $('#dashIncome').textContent = fmt(income);
-    $('#dashExpense').textContent = fmt(expense);
-    $('#dashExpenseBar').style.width = (income > 0 ? Math.min(100, Math.round(expense / income * 100)) : 0) + '%';
+    // Panel "Thu chi tháng" trên dashboard đã bị gỡ → chỉ ghi khi ô còn tồn tại
+    const dashInc = $('#dashIncome'), dashExp = $('#dashExpense'), dashBar = $('#dashExpenseBar');
+    if (dashInc) dashInc.textContent = fmt(income);
+    if (dashExp) dashExp.textContent = fmt(expense);
+    if (dashBar) dashBar.style.width = (income > 0 ? Math.min(100, Math.round(expense / income * 100)) : 0) + '%';
 
     // Card so sánh số tiền còn lại trong ví tháng này với mức chi tiêu tối thiểu
     // (mục nhập không bắt buộc — để trống ẩn card). Tối đa 100%, đạt 100% thì thanh xanh.

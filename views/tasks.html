@@ -26,6 +26,14 @@
             <option value="open">Chưa xong</option>
             <option value="done">Đã xong</option>
           </select>
+          <!-- Lọc theo thời gian: bấm hiện LỊCH (không phải dropdown) -->
+          <div class="time-filter" id="taskTimeFilter">
+            <button class="button time-btn" id="taskTimeBtn" aria-haspopup="dialog" aria-expanded="false">
+              <svg class="icon-cal" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3" width="13" height="11.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M1.5 6.5h13" stroke="currentColor" stroke-width="1.4"/><path d="M5 1.6v2.6M11 1.6v2.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              <span id="taskTimeLabel">Thời gian</span>
+            </button>
+            <button class="button ghost" id="taskTimeClear" hidden aria-label="Xóa lọc thời gian">✕</button>
+          </div>
         </div>
         <div id="allTasks" class="list-scroll thin-scroll" data-dnd-group="taskList"></div>
       </section>

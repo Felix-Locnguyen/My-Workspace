@@ -31,6 +31,27 @@
     });
   }
 
+  // ── Lọc theo thời gian (local — không lưu server, F5 về mặc định) ──
+  // Bấm chip → hiện LỊCH chọn Ngày | Tháng | Năm (js/calendar.js).
+  let taskTime = null;   // null | { mode:'day'|'month'|'year', value:'YYYY-MM-DD'|'YYYY-MM'|'YYYY' }
+
+  // Khớp kỳ: ngày hẹn HOẶC ngày hoàn thành nằm trong kỳ (so theo tiền tố ISO,
+  // cùng cách với list ma trận: hoàn thành đúng ngày / hẹn đúng ngày).
+  const inTaskTime = t => !taskTime ||
+    [t.dueDate, t.completedAt].some(k => k && k.startsWith(taskTime.value));
+
+  function syncTimeChip() {
+    const btn = $('#taskTimeBtn'), label = $('#taskTimeLabel'), clear = $('#taskTimeClear');
+    if (!btn || !label || !clear) return;
+    const on = !!taskTime;
+    btn.classList.toggle('active', on);
+    clear.hidden = !on;
+    if (!on) label.textContent = 'Thời gian';
+    else if (taskTime.mode === 'day') label.textContent = fmtDay(taskTime.value);
+    else if (taskTime.mode === 'month') label.textContent = taskTime.value.slice(5) + '/' + taskTime.value.slice(0, 4);
+    else label.textContent = taskTime.value;
+  }
+
   // Công việc
   function renderTasks() {
     const taskMarkup = t => `
@@ -47,24 +68,29 @@
 
     $('#dashboardTasks').innerHTML = todayTasks().slice(0, 5).map(taskMarkup).join('') || '<div class="empty-note">Không có công việc nào hôm nay.</div>';
 
+    // List & 4 card chạy theo KỲ ĐANG LỌC (khi bật) — chưa lọc thì như cũ (hôm nay).
+    const base = taskTime ? state.tasks.filter(inTaskTime) : todayTasks();
     const q = ($('#taskSearch').value || '').toLowerCase();
     const filterCat = $('#taskFilterCategory').value;
     const filter = $('#taskFilter').value;
-    const shown = todayTasks().filter(t => {
+    const shown = base.filter(t => {
       const matchQ = (t.title + ' ' + t.meta + ' ' + t.tag + ' ' + (t.projectTitle || '')).toLowerCase().includes(q);
       const matchCat = filterCat === 'all' || t.tag === filterCat;
       const matchStat = filter === 'all' || (filter === 'done' ? t.status === 'done' : t.status !== 'done');
       return matchQ && matchCat && matchStat;
     });
-    $('#allTasks').innerHTML = shown.length ? shown.map(taskMarkup).join('') : '<div class="empty-note">Không tìm thấy công việc phù hợp.</div>';
+    $('#allTasks').innerHTML = shown.length ? shown.map(taskMarkup).join('')
+      : `<div class="empty-note">${base.length ? 'Không tìm thấy công việc phù hợp.' : 'Không có công việc trong kỳ đã chọn.'}</div>`;
 
-    const doneCount = todayTasks().filter(t => t.status === 'done').length;
-    const totalCount = todayTasks().length;
+    const doneCount = base.filter(t => t.status === 'done').length;
+    const totalCount = base.length;
     $('#taskTotal').textContent = totalCount;
     $('#taskDone').textContent = doneCount;
     $('#taskPending').textContent = totalCount - doneCount;
     $('#taskRate').textContent = totalCount ? Math.round(doneCount / totalCount * 100) + '%' : '0%';
-    $('#dashTaskStat').textContent = `${doneCount}/${totalCount}`;
+    // Số ở dashboard luôn theo hôm nay, không theo bộ lọc của trang Công việc
+    const dashDay = todayTasks();
+    $('#dashTaskStat').textContent = `${dashDay.filter(t => t.status === 'done').length}/${dashDay.length}`;
   }
 
 
@@ -110,3 +136,19 @@
   }
   $('#addTaskBtn').addEventListener('click', promptTaskModal);
   $('#quickAdd').addEventListener('click', promptTaskModal);
+
+  // ── Bộ lọc thời gian: bấm chip → mở lịch (js/calendar.js) ──
+  $('#taskTimeBtn').addEventListener('click', () => openCalendar({
+    anchor: $('#taskTimeBtn'),
+    mode: taskTime ? taskTime.mode : 'day',
+    value: taskTime ? taskTime.value : dateKey(new Date()),
+    onPick: (mode, value) => { taskTime = { mode, value }; syncTimeChip(); renderTasks(); },
+    onClear: () => { taskTime = null; syncTimeChip(); renderTasks(); }
+  }));
+  $('#taskTimeClear').addEventListener('click', () => {
+    taskTime = null;
+    syncTimeChip();
+    renderTasks();
+    showToast('Đã xóa lọc thời gian');
+  });
+  syncTimeChip();   // đồng bộ chip với state ngay khi load
